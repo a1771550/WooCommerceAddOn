@@ -1,0 +1,21 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="WooCommerceAddOn.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="DeviceId" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">1D64EA10-ED1D-4F12-9270-104D31EF344A</Value>
+    </Setting>
+    <Setting Name="DateFormat" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">dd/MM/yyyy</Value>
+    </Setting>
+    <Setting Name="KeyString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">1719BF10BBF701D92AD22C8564607656144672AAD85AABE10A49F71763C8BF8DA1D2F5BC82875D51B3CB2D4C415CF89AC3DC8FFCBD8621F093ABB5C2B043BD31</Value>
+    </Setting>
+    <Setting Name="KeyName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">woocommercexabss.key</Value>
+    </Setting>
+    <Setting Name="KeyLocation" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\AbssKey</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
