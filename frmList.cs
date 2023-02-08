@@ -39,6 +39,7 @@ namespace WooCommerceAddOn
         //private bool isDemo { get { return ConfigurationManager.AppSettings["Demo"] == "1"; } }
         private DataType type { get; set; }
         private int PageSize = int.Parse(ConfigurationManager.AppSettings["PageLength"]);
+        private int PageBatchSize = int.Parse(ConfigurationManager.AppSettings["PageBatchSize"]);
         private int CurrentPageIndex = 1;
         private int TotalPage = 0;
         public int ExpectedTotal = 0;
@@ -53,9 +54,9 @@ namespace WooCommerceAddOn
         private List<Order> FilteredOrders { get; set; }
         private List<Product> FilteredProducts { get; set; }
 
-        private List<CustomerModel> CurrentWooCustomerList { get; set; }
-        private List<ItemModel> CurrentWooItemList { get; set; }
-        private List<SalesLnView> CurrentWooSalesList { get; set; }
+        //private List<CustomerModel> CurrentWooCustomerList { get; set; }
+        //private List<ItemModel> CurrentWooItemList { get; set; }
+        //private List<SalesLnView> CurrentWooSalesList { get; set; }
         private RestAPI rest { get; set; }
         //RestAPI rest = new RestAPI(string.Format("{0}/wp-json/wc/v3/", endpoint), key, secret);
         public frmList(ComInfoModel comInfo)
@@ -100,26 +101,47 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.Product:
-                    Products = await ModelHelper.GetWooProduct(rest);
+                    for (int i = 1; i <= PageBatchSize; i++)
+                    {
+                        var _products = await ModelHelper.GetWooProduct(rest, i);
+                        Products.AddRange(_products);
+                    }
                     progressBar1.Visible = false;
+                    Products = Products.OrderByDescending(x => x.date_created).ToList();
 
-                    BindingList<Product> bindingList_P = new BindingList<Product>(Products);
+                    var products = Products.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+
+                    BindingList<Product> bindingList_P = new BindingList<Product>(products);
                     source = new BindingSource(bindingList_P, null);
                     break;
                 case DataType.Customer:
-                    Customers = await ModelHelper.GetWooCustomer(rest);
+                    for (int i = 1; i <= PageBatchSize; i++)
+                    {
+                        var _products = await ModelHelper.GetWooCustomer(rest, CustomerRole.all, i);
+                        Customers.AddRange(_products);
+                    }
+                    progressBar1.Visible = false;
+                    Customers = Customers.OrderByDescending(x => x.date_created).ToList();
+
+                    var customers = Customers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                     progressBar1.Visible = false;
 
-                    BindingList<Customer> bindingList_C = new BindingList<Customer>(Customers);
+                    BindingList<Customer> bindingList_C = new BindingList<Customer>(customers);
                     source = new BindingSource(bindingList_C, null);
                     break;
                 default:
                 case DataType.Order:
-                    Orders = await ModelHelper.GetWooOrder(rest);
+                    for (int i = 1; i <= PageBatchSize; i++)
+                    {
+                        var _products = await ModelHelper.GetWooOrder(rest, i);
+                        Orders.AddRange(_products);
+                    }
                     TaxRates = await ModelHelper.GetWooTaxRate(rest);
                     progressBar1.Visible = false;
+                    Orders = Orders.OrderByDescending(x => x.date_created).ToList();
 
-                    BindingList<Order> bindingList_O = new BindingList<Order>(Orders);
+                    var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    BindingList<Order> bindingList_O = new BindingList<Order>(orders);
                     source = new BindingSource(bindingList_O, null);
                     break;
 
@@ -148,7 +170,7 @@ namespace WooCommerceAddOn
                         FouledProductNameList = new Dictionary<string, string>();
                         progressBar1.Visible = true;
                         progressBar1.Style = ProgressBarStyle.Marquee;
-                        CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);//don't remove!
+                        //todo:
 
                         List<ItemModel> itemlist = new List<ItemModel>();
                         List<ItemModel> currentwooitems = new List<ItemModel>();
@@ -659,7 +681,7 @@ namespace WooCommerceAddOn
                                     List<string> values = new List<string>();
                                     foreach (var item in group)
                                     {
-                                        salespaidamt = item.InvoiceStatus == "processing" ? 0:(double)dicPayList[item.rtlCode].rtpPayAmt;
+                                        salespaidamt = item.InvoiceStatus == "processing" ? 0 : (double)dicPayList[item.rtlCode].rtpPayAmt;
                                         invoicestatus = !item.IsCheckout && item.InvoiceStatus.ToLower() == "processing" ? "O" : "I";
                                         var payview = dicPayList[item.rtlCode];
                                         paytypes = payview.rtpWooPayMethod;
@@ -685,7 +707,7 @@ namespace WooCommerceAddOn
                                         else
                                         {
                                             sql = "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,Location,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)  VALUES(";
-                                            
+
                                             collength = 24;
                                             columns = new List<string>();
                                             for (int j = 0; j < collength; j++)
@@ -1141,10 +1163,10 @@ namespace WooCommerceAddOn
                             List<string> values = new List<string>();
                             foreach (var item in CurrentWooItemList)
                             {
-                                string value = "";                                
+                                string value = "";
                                 char buy = item.itmIsBought ? 'Y' : 'N';
                                 char sell = 'Y';
-                                char inventory = 'Y';                                
+                                char inventory = 'Y';
                                 string taxcode = item.itmTaxCode;
                                 string inactivetxt = "N";
                                 /*
@@ -1324,63 +1346,23 @@ namespace WooCommerceAddOn
             }
         }
 
-        private async Task<BindingSource> GetCurrentRecords()
+        private BindingSource GetCurrentRecords()
         {
             //int startIndex = (page - 1) * PageSize;
             switch (type)
             {
                 case DataType.Product:
-                    FilteredProducts = new List<Product>();
-                    FilteredProducts = await ModelHelper.GetWooProduct(rest, CurrentPageIndex);
-                    if (FilteredProducts.Count > 0)
-                    {
-                        var currentIdlist = Products.Select(x => x.id).ToList();
-                        foreach (var product in FilteredProducts)
-                        {
-                            if (!currentIdlist.Contains(product.id))
-                            {
-                                Products.Add(product);
-                            }
-                        }
-                    }
-                    //FilteredProducts = Products.Skip(startIndex).Take(PageSize).ToList();
-                    var bindingList_P = new BindingList<Product>(FilteredProducts);
-
+                    var products = Products.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var bindingList_P = new BindingList<Product>(products);
                     return new BindingSource(bindingList_P, null);
                 case DataType.Customer:
-                    FilteredCustomers = new List<Customer>();
-                    FilteredCustomers = await ModelHelper.GetWooCustomer(rest, CustomerRole.all, CurrentPageIndex);
-                    if (FilteredCustomers.Count > 0)
-                    {
-                        var currentIdlist = Customers.Select(x => x.id).ToList();
-                        foreach (var customer in FilteredCustomers)
-                        {
-                            if (!currentIdlist.Contains(customer.id))
-                            {
-                                Customers.Add(customer);
-                            }
-                        }
-                    }
-                    //FilteredCustomers = Customers.Skip(startIndex).Take(PageSize).ToList();
-                    var bindingList_C = new BindingList<Customer>(FilteredCustomers);
+                    var customers = Customers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var bindingList_C = new BindingList<Customer>(customers);
                     return new BindingSource(bindingList_C, null);
                 default:
                 case DataType.Order:
-                    FilteredOrders = new List<Order>();
-                    FilteredOrders = await ModelHelper.GetWooOrder(rest, CurrentPageIndex);
-                    if (FilteredOrders.Count > 0)
-                    {
-                        var currentIdlist = Orders.Select(x => x.id).ToList();
-                        foreach (var order in FilteredOrders)
-                        {
-                            if (!currentIdlist.Contains(order.id))
-                            {
-                                Orders.Add(order);
-                            }
-                        }
-                    }
-                    //FilteredOrders = Orders.Skip(startIndex).Take(PageSize).ToList();
-                    var bindingList_O = new BindingList<Order>(FilteredOrders);
+                    var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var bindingList_O = new BindingList<Order>(orders);
                     return new BindingSource(bindingList_O, null);
             }
 
@@ -1393,22 +1375,22 @@ namespace WooCommerceAddOn
         //    this.dgList.DataSource = await GetCurrentRecords(this.CurrentPageIndex);
         //}
 
-        private async void btnNxtPage_Click(object sender, EventArgs e)
+        private void btnNxtPage_Click(object sender, EventArgs e)
         {
             //if (this.CurrentPageIndex < this.TotalPage)
             //{
             this.CurrentPageIndex++;
-            this.dgList.DataSource = await GetCurrentRecords();
+            this.dgList.DataSource = GetCurrentRecords();
             //}
 
         }
 
-        private async void btnPrevPage_Click(object sender, EventArgs e)
+        private void btnPrevPage_Click(object sender, EventArgs e)
         {
             if (this.CurrentPageIndex > 1)
             {
                 this.CurrentPageIndex--;
-                this.dgList.DataSource = await GetCurrentRecords();
+                this.dgList.DataSource = GetCurrentRecords();
             }
         }
 
