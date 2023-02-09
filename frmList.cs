@@ -68,24 +68,17 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.Product:
-                    CurrentWooItemList = new List<ItemModel>();
-                    CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
                     Products = new List<Product>();
-
                     this.Text = "Product List";
                     break;
                 case DataType.Customer:
-                    CurrentWooCustomerList = new List<CustomerModel>();
-                    CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);
                     Customers = new List<Customer>();
-
                     this.Text = "Customer List";
                     break;
                 default:
                 case DataType.Order:
                     Orders = new List<Order>();
                     TaxRates = new List<TaxRate>();
-
                     this.Text = "Order List";
                     break;
             }
@@ -97,6 +90,7 @@ namespace WooCommerceAddOn
         {
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
+            decimal totalpages = 0;
 
             switch (type)
             {
@@ -107,6 +101,8 @@ namespace WooCommerceAddOn
                         Products.AddRange(_products);
                     }
                     progressBar1.Visible = false;
+                    totalpages = Products.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
                     Products = Products.OrderByDescending(x => x.date_created).ToList();
 
                     var products = Products.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
@@ -121,6 +117,8 @@ namespace WooCommerceAddOn
                         Customers.AddRange(_products);
                     }
                     progressBar1.Visible = false;
+                    totalpages = Customers.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
                     Customers = Customers.OrderByDescending(x => x.date_created).ToList();
 
                     var customers = Customers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
@@ -138,6 +136,8 @@ namespace WooCommerceAddOn
                     }
                     TaxRates = await ModelHelper.GetWooTaxRate(rest);
                     progressBar1.Visible = false;
+                    totalpages = Orders.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
                     Orders = Orders.OrderByDescending(x => x.date_created).ToList();
 
                     var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
@@ -147,12 +147,7 @@ namespace WooCommerceAddOn
 
             }
             dgList.DataSource = source;
-            // WORK IN PAGING FOR DATAGRIDVIEW
-            // Get total count of the pages; 
-            //this.CalculateTotalPages();
             this.dgList.ReadOnly = true;
-            // Load the first page of data; 
-            //this.dgList.DataSource = await GetCurrentRecords(CurrentPageIndex);
         }
 
         private async void btnSaveDB_Click(object sender, EventArgs e)
@@ -170,39 +165,29 @@ namespace WooCommerceAddOn
                         FouledProductNameList = new Dictionary<string, string>();
                         progressBar1.Visible = true;
                         progressBar1.Style = ProgressBarStyle.Marquee;
-                        //todo:
 
                         List<ItemModel> itemlist = new List<ItemModel>();
                         List<ItemModel> currentwooitems = new List<ItemModel>();
 
+                        #region remove current data first:
+                        ItemEditModel.RemoveAll();
+                        #endregion
+
+                        #region add data:
                         foreach (var i in Products)
                         {
-                            var currentWooItem = CurrentWooItemList.Where(x => x.itmWooItemId == (int)i.id).FirstOrDefault();
-
-                            if (currentWooItem == null)
+                            ItemModel item = PopulateItem(i);
+                            if (item != null)
                             {
-                                ItemModel item = PopulateItem(i);
-                                if (item != null)
-                                {
-                                    itemlist.Add(item);
-                                }
-                            }
-                            else
-                            {
-                                currentwooitems.Add(currentWooItem);
+                                itemlist.Add(item);
                             }
                         }
-
                         if (itemlist.Count > 0)
                         {
                             await ItemEditModel.AddList(itemlist);
                             progressBar1.Visible = false;
                         }
-                        if (currentwooitems.Count > 0)
-                        {
-                            await ItemEditModel.EditList(currentwooitems);
-                            progressBar1.Visible = false;
-                        }
+                        #endregion
 
                         if (FouledProductNameList.Count > 0)
                         {
@@ -229,95 +214,46 @@ namespace WooCommerceAddOn
                         MessageBox.Show("No Data Found!", "Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     }
                     else
-                    {
-                        FouledCustomerIdList = new Dictionary<int, string>();
+                    {                       
                         progressBar1.Visible = true;
                         progressBar1.Style = ProgressBarStyle.Marquee;
-                        CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);//don't remove!
 
                         List<CustomerModel> customerlist = new List<CustomerModel>();
                         List<CustomerModel> currentwoocustomers = new List<CustomerModel>();
 
+                        #region remove current data first:
+                        CustomerEditModel.RemoveAll();
+                        #endregion
+
+                        #region add data:
                         foreach (var c in Customers)
                         {
-                            var currentWooCustomer = CurrentWooCustomerList.Where(x => x.cusCustomerID == c.id).FirstOrDefault();
-
-                            if (currentWooCustomer == null)
+                            string cuscode = CommonHelper.GenerateNonce(CustomerCodeLength);
+                            CustomerModel customer = new CustomerModel
                             {
-                                string cuscode = CommonHelper.GenerateNonce(CustomerCodeLength);
-
-                                //string username = string.IsNullOrEmpty(c.billing.company) ? string.Concat(c.first_name, "", c.last_name) : c.billing.company;
-
-                                //if (username.Length > CustomerNameLength)
-                                //{
-                                //    FouledCustomerIdList[(int)c.id] = string.Format(@"The length of CompanyName/FirstName+LastName exceeds {0}", CustomerNameLength);
-                                //}
-
-                                //if (!string.IsNullOrEmpty(c.billing.phone) && c.billing.phone.Length > CustomerCodeLength)
-                                //{
-                                //    FouledCustomerIdList[(int)c.id] = string.Format(@"The length of Phone exceeds {0}", CustomerCodeLength);
-                                //}
-
-                                //if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(c.billing.phone))
-                                //{
-                                //    FouledCustomerIdList[(int)c.id] = @"CompanyName/FirstName+LastName and Phone are empty";
-                                //}
-                                //else
-                                //{
-
-                                CustomerModel customer = new CustomerModel
-                                {
-                                    cusCustomerID = (int)c.id,
-                                    cusCode = cuscode,
-                                    cusCreateTime = c.date_created_gmt,
-                                    cusModifyTime = c.date_modified_gmt,
-                                    cusEmail = c.email,
-                                    cusFirstName = c.first_name,
-                                    cusLastName = c.last_name,
-                                    cusName = c.username,
-                                    cusPointsUsed = 0,
-                                    cusRole = c.role,
-                                    cusPhone = c.billing.phone,
-                                    cusContact = c.username
-                                };
-
-                                customer.cusPointsSoFar = await GetCustomerPointFrmOrders((long)c.id);
-                                customerlist.Add(customer);
-                                //}
-                            }
-                            else
-                            {
-                                currentWooCustomer.cusPointsSoFar += await GetCustomerPointFrmOrders((long)c.id);
-                                currentwoocustomers.Add(currentWooCustomer);
-                            }
+                                cusCustomerID = (int)c.id,
+                                cusCode = cuscode,
+                                cusCreateTime = c.date_created_gmt,
+                                cusModifyTime = c.date_modified_gmt,
+                                cusEmail = c.email,
+                                cusFirstName = c.first_name,
+                                cusLastName = c.last_name,
+                                cusName = c.username,
+                                cusPointsUsed = 0,
+                                cusRole = c.role,
+                                cusPhone = c.billing.phone,
+                                cusContact = c.username
+                            };
+                            //customer.cusPointsSoFar = await GetCustomerPointFrmOrders((long)c.id);
+                            customerlist.Add(customer);
                         }
-
                         if (customerlist.Count > 0)
                         {
                             await CustomerEditModel.AddList(customerlist);
                             progressBar1.Visible = false;
-                        }
-                        if (currentwoocustomers.Count > 0)
-                        {
-                            await CustomerEditModel.EditList(currentwoocustomers);
-                            progressBar1.Visible = false;
-                        }
-
-                        if (FouledCustomerIdList.Count > 0)
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            foreach (var item in FouledCustomerIdList)
-                            {
-                                sb.AppendFormat("ID:{0} Reasons:{1}{2}", item.Key, item.Value, Environment.NewLine);
-                            }
-                            var msg = string.Format("AddOn did not save the customers with reasons as follows:{0}{1}", Environment.NewLine, sb.ToString());
-                            msg += String.Format("{0} while other customers are saved.", Environment.NewLine);
-                            MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
                             MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
+                        #endregion
                     }
 
                     break;
@@ -343,16 +279,11 @@ namespace WooCommerceAddOn
                             progressBar1.Visible = true;
                             progressBar1.Style = ProgressBarStyle.Marquee;
                             var currentSalesIds = SalesEditModel.GetWooSalesIdList(abss);
-
-                            //CurrentWooSalesList = SalesEditModel.GetWooSalesList(abss);//don't remove!
-
                             List<SalesModel> saleslist = new List<SalesModel>();
                             List<SalesLnView> salelnslist = new List<SalesLnView>();
                             List<SalesLnView> currentwoosaless = new List<SalesLnView>();
                             List<Order> neworders = new List<Order>();
 
-                            //if (CurrentWooSalesList.Count > 0)
-                            //{
                             foreach (Order order in Orders)
                             {
                                 if (!currentSalesIds.Any(x => x == (int)order.id))
@@ -372,7 +303,7 @@ namespace WooCommerceAddOn
                                         StringBuilder sb = new StringBuilder();
                                         foreach (var item in FouledOrderIdList)
                                         {
-                                            sb.AppendFormat("Name:{0} Reasons:{1}{2}", item.Key, item.Value, Environment.NewLine);
+                                            sb.AppendFormat("Order Number:{0} Reasons:{1}{2}", item.Key, item.Value, Environment.NewLine);
                                         }
                                         var msg = string.Format("AddOn did not save the orders with reasons as follows:{0}{1}", Environment.NewLine, sb.ToString());
                                         msg += String.Format("{0} while other orders are saved.", Environment.NewLine);
@@ -754,7 +685,8 @@ namespace WooCommerceAddOn
         private async Task<List<int>> AddSales(List<Order> orders, ComInfoModel comInfo)
         {
             FouledOrderIdList = new Dictionary<string, string>();
-            DateTime dtnow = CommonHelper.GetCacheDateTimeNow();
+            //DateTime dtnow = CommonHelper.GetCacheDateTimeNow();
+            DateTime dtnow = DateTime.Now;
 
             var products = ModelHelper.GetWooProductFrmDb();
             //products = await ModelHelper.GetWooProduct(rest);
@@ -1134,7 +1066,7 @@ namespace WooCommerceAddOn
 
         private async Task<AbssResult> WriteItemToABSS()
         {
-            CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
+            var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
             if (CurrentWooItemList.Count == 0)
             {
                 MessageBox.Show("No Item Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -1208,7 +1140,7 @@ namespace WooCommerceAddOn
 
         private async Task<AbssResult> WriteVipToABSS()
         {
-            CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);
+            var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);
             if (CurrentWooCustomerList.Count == 0)
             {
                 MessageBox.Show("No Customer Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -1348,7 +1280,6 @@ namespace WooCommerceAddOn
 
         private BindingSource GetCurrentRecords()
         {
-            //int startIndex = (page - 1) * PageSize;
             switch (type)
             {
                 case DataType.Product:
@@ -1365,24 +1296,15 @@ namespace WooCommerceAddOn
                     var bindingList_O = new BindingList<Order>(orders);
                     return new BindingSource(bindingList_O, null);
             }
-
         }
-
-
-        //private async void btnFirstPAge_Click(object sender, EventArgs e)
-        //{
-        //    this.CurrentPageIndex = 1;
-        //    this.dgList.DataSource = await GetCurrentRecords(this.CurrentPageIndex);
-        //}
 
         private void btnNxtPage_Click(object sender, EventArgs e)
         {
-            //if (this.CurrentPageIndex < this.TotalPage)
-            //{
-            this.CurrentPageIndex++;
-            this.dgList.DataSource = GetCurrentRecords();
-            //}
-
+            if (this.CurrentPageIndex < TotalPage)
+            {
+                this.CurrentPageIndex++;
+                this.dgList.DataSource = GetCurrentRecords();
+            }
         }
 
         private void btnPrevPage_Click(object sender, EventArgs e)
@@ -1393,49 +1315,6 @@ namespace WooCommerceAddOn
                 this.dgList.DataSource = GetCurrentRecords();
             }
         }
-
-        //private void btnLastPage_Click(object sender, EventArgs e)
-        //{
-        //    this.CurrentPageIndex = TotalPage;
-        //    this.dgList.DataSource = GetCurrentRecords(this.CurrentPageIndex);
-        //}
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
-
-        //private void source_CurrentChanged(object sender, EventArgs e)
-        //{
-        //    // The desired page has changed, so fetch the page of records using the "Current" offset 
-        //    int offset = (int)source.Current;
-        //    switch (type)
-        //    {
-        //        case DataType.Product:
-        //            var records = new List<Product>();
-        //            progressBar1.Visible = false;
-
-        //            dataGridView1.DataSource = records;
-        //            break;
-        //        case DataType.Customer:
-        //            Customers = await ModelHelper.GetWooCustomer(rest);
-        //            progressBar1.Visible = false;
-
-        //            BindingList<Customer> bindingList_C = new BindingList<Customer>(Customers);
-        //            source = new BindingSource(bindingList_C, null);
-        //            break;
-        //        default:
-        //        case DataType.Order:
-        //            Orders = await ModelHelper.GetWooOrder(rest);
-        //            TaxRates = await ModelHelper.GetWooTaxRate(rest);
-        //            progressBar1.Visible = false;
-
-        //            BindingList<Order> bindingList_O = new BindingList<Order>(Orders);
-        //            source = new BindingSource(bindingList_O, null);
-        //            break;
-
-        //    }
-        //}
 
         class PageOffsetList : System.ComponentModel.IListSource
         {
@@ -1461,6 +1340,11 @@ namespace WooCommerceAddOn
         private void numExpectedTotal_ValueChanged(object sender, EventArgs e)
         {
             //ExpectedTotal = (int)numActualTotal.Value;
+        }
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            Close();
         }
     }
 }
