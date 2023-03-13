@@ -20,6 +20,8 @@ using CommonLib.Models;
 using MYOBLib.Models;
 using System.Drawing.Printing;
 using System.Text.RegularExpressions;
+using CommonLib.Models.MYOB;
+using WALib.Models.MYOB;
 
 namespace WooCommerceAddOn
 {
@@ -28,7 +30,6 @@ namespace WooCommerceAddOn
         public Dictionary<string, string> FouledOrderIdList { get; set; }
         public Dictionary<int, string> FouledCustomerIdList { get; set; }
         private int MaxItemCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["ItemCodeLength"]); } }
-        private int MaxItemNameLength { get { return int.Parse(ConfigurationManager.AppSettings["ItemNameLength"]); } }
         public Dictionary<string, string> FouledProductNameList { get; set; }
         private ComInfoModel comInfo { get; set; }
         //private string DeviceId { get; set; }
@@ -45,15 +46,13 @@ namespace WooCommerceAddOn
         public int ExpectedTotal = 0;
         public int ActualTotal = 0;
         //private int Page = 1;
-
+        private List<MyobCustomerModel> AbssCustomers { get; set; }
+        private List<MyobItemModel> AbssProducts { get; set; }
+        private List<SalesModel> AbssOrders { get; set; }
         private List<Customer> Customers { get; set; }
         private List<Order> Orders { get; set; }
-        private List<TaxRate> TaxRates { get; set; }
         private List<Product> Products { get; set; }
-        private List<Customer> FilteredCustomers { get; set; }
-        private List<Order> FilteredOrders { get; set; }
-        private List<Product> FilteredProducts { get; set; }
-
+        private ABSSModel abss { get; set; }
         //private List<CustomerModel> CurrentWooCustomerList { get; set; }
         //private List<ItemModel> CurrentWooItemList { get; set; }
         //private List<SalesLnView> CurrentWooSalesList { get; set; }
@@ -64,26 +63,58 @@ namespace WooCommerceAddOn
             InitializeComponent();
             this.comInfo = comInfo;
             type = comInfo.dataType;
+            abss = new ABSSModel();
+            if (type.ToString().StartsWith("Abss"))
+            {
+                btnABSS.Enabled = false;
+                abss.Driver = comInfo.abssDriver;
+                abss.FileLocation = comInfo.abssFileLocation;
+                abss.FileName = comInfo.abssFileName;
+                abss.UserId = comInfo.abssUserId;
+                abss.UserPass = comInfo.abssUserPass;
+                abss.AppExeLocation = comInfo.abssExeLocation;
+                abss.AppExeName = comInfo.abssExeName;
+                abss.KeyLocation = comInfo.abssKeyLocation;
+                abss.KeyName = comInfo.abssKeyName;
+                //lblTotal.Visible = true;
+            }
+            else
+            {
+                var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
+                rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+                btnWooCommerce.Enabled = false;
+                //lblTotal.Visible = false;
+            }
 
             switch (type)
             {
+                case DataType.AbssCustomer:
+                    AbssCustomers = new List<MyobCustomerModel>();
+                    this.Text = "ABSS Customer List";
+                    break;
+                case DataType.AbssProduct:
+                    AbssProducts = new List<MyobItemModel>();
+                    this.Text = "ABSS Product List";
+                    break;
+                case DataType.AbssOrder:
+                    AbssOrders = new List<SalesModel>();
+                    this.Text = "ABSS Order List";
+                    break;
                 case DataType.Product:
                     Products = new List<Product>();
-                    this.Text = "Product List";
+                    this.Text = "WooCommerce Product List";
                     break;
                 case DataType.Customer:
                     Customers = new List<Customer>();
-                    this.Text = "Customer List";
+                    this.Text = "WooCommerce Customer List";
                     break;
                 default:
                 case DataType.Order:
                     Orders = new List<Order>();
-                    TaxRates = new List<TaxRate>();
-                    this.Text = "Order List";
+                    this.Text = "WooCommerce Order List";
                     break;
             }
-            var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
-            rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+            
         }
 
         private async void frmList_Load(object sender, EventArgs e)
@@ -94,6 +125,27 @@ namespace WooCommerceAddOn
 
             switch (type)
             {
+                case DataType.AbssCustomer:
+                    AbssCustomers = MYOBHelper.GetCustomerList(abss);                   
+                    progressBar1.Visible = false;
+                    totalpages = AbssCustomers.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
+                    var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);                    
+                    source = new BindingSource(bindingList_abssC, null);                   
+                    break;
+                case DataType.AbssProduct:
+                    AbssProducts = MYOBHelper.GetItemList(abss);
+                    progressBar1.Visible = false;
+                    totalpages = AbssProducts.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
+                    var mproducts = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
+                    source = new BindingSource(bindingList_abssP, null);
+                    break;
+                case DataType.AbssOrder:
+
+                    break;
                 case DataType.Product:
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
@@ -134,7 +186,6 @@ namespace WooCommerceAddOn
                         var _products = await ModelHelper.GetWooOrder(rest, i);
                         Orders.AddRange(_products);
                     }
-                    TaxRates = await ModelHelper.GetWooTaxRate(rest);
                     progressBar1.Visible = false;
                     totalpages = Orders.Count / PageSize;
                     TotalPage = (int)Math.Ceiling(totalpages);
@@ -146,8 +197,12 @@ namespace WooCommerceAddOn
                     break;
 
             }
-            dgList.DataSource = source;
+            dgList.DataSource = source;           
             this.dgList.ReadOnly = true;
+            if(type== DataType.AbssCustomer)
+            {
+                dgList.Columns[0].Visible=false;
+            }
         }
 
         private async void btnSaveDB_Click(object sender, EventArgs e)
@@ -214,7 +269,7 @@ namespace WooCommerceAddOn
                         MessageBox.Show("No Data Found!", "Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     }
                     else
-                    {                       
+                    {
                         progressBar1.Visible = true;
                         progressBar1.Style = ProgressBarStyle.Marquee;
 
@@ -1278,6 +1333,25 @@ namespace WooCommerceAddOn
             }
         }
 
+        private BindingSource GetCurrentRecordsABSS()
+        {
+            switch (type)
+            {
+                case DataType.AbssCustomer:
+                    var customers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var bindingList_C = new BindingList<MyobCustomerModel>(customers);
+                    return new BindingSource(bindingList_C, null);
+
+                case DataType.AbssProduct:
+                    var products = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var bindingList_P = new BindingList<MyobItemModel>(products);
+                    return new BindingSource(bindingList_P, null);
+                default:
+                case DataType.AbssOrder:
+                    var bindingList_O = new BindingList<SalesModel>();
+                    return new BindingSource(bindingList_O, null);
+            }            
+        }
         private BindingSource GetCurrentRecords()
         {
             switch (type)
@@ -1303,7 +1377,15 @@ namespace WooCommerceAddOn
             if (this.CurrentPageIndex < TotalPage)
             {
                 this.CurrentPageIndex++;
-                this.dgList.DataSource = GetCurrentRecords();
+                if (type.ToString().StartsWith("Abss"))
+                {
+                    this.dgList.DataSource = GetCurrentRecordsABSS();
+                }
+                else
+                {
+                    this.dgList.DataSource = GetCurrentRecords();
+                }
+                
             }
         }
 
@@ -1312,7 +1394,15 @@ namespace WooCommerceAddOn
             if (this.CurrentPageIndex > 1)
             {
                 this.CurrentPageIndex--;
-                this.dgList.DataSource = GetCurrentRecords();
+                if (type.ToString().StartsWith("Abss"))
+                {
+                    this.dgList.DataSource = GetCurrentRecordsABSS();
+                }
+                else
+                {
+                    this.dgList.DataSource = GetCurrentRecords();
+                }
+                    
             }
         }
 
@@ -1345,6 +1435,12 @@ namespace WooCommerceAddOn
         private void btnExit_Click(object sender, EventArgs e)
         {
             Close();
+        }
+
+
+        private void btnWooCommerce_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

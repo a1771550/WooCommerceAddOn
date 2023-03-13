@@ -39,6 +39,7 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.btnABSS = new System.Windows.Forms.Button();
             this.source = new System.Windows.Forms.BindingSource(this.components);
+            this.btnWooCommerce = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgList)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.source)).BeginInit();
@@ -65,31 +66,34 @@
             // 
             // btnPrevPage
             // 
-            this.btnPrevPage.BackColor = System.Drawing.Color.Gainsboro;
-            this.btnPrevPage.Location = new System.Drawing.Point(206, 13);
+            this.btnPrevPage.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.btnPrevPage.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPrevPage.Location = new System.Drawing.Point(25, 12);
             this.btnPrevPage.Name = "btnPrevPage";
             this.btnPrevPage.Size = new System.Drawing.Size(75, 23);
             this.btnPrevPage.TabIndex = 13;
-            this.btnPrevPage.Text = "Previous Page";
+            this.btnPrevPage.Text = "Previous";
             this.btnPrevPage.UseVisualStyleBackColor = false;
             this.btnPrevPage.Click += new System.EventHandler(this.btnPrevPage_Click);
             // 
             // btnNxtPage
             // 
-            this.btnNxtPage.BackColor = System.Drawing.Color.Gainsboro;
-            this.btnNxtPage.Location = new System.Drawing.Point(21, 12);
+            this.btnNxtPage.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
+            this.btnNxtPage.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnNxtPage.Location = new System.Drawing.Point(206, 12);
             this.btnNxtPage.Name = "btnNxtPage";
             this.btnNxtPage.Size = new System.Drawing.Size(75, 23);
             this.btnNxtPage.TabIndex = 11;
-            this.btnNxtPage.Text = "Next page";
+            this.btnNxtPage.Text = "Next";
             this.btnNxtPage.UseVisualStyleBackColor = false;
             this.btnNxtPage.Click += new System.EventHandler(this.btnNxtPage_Click);
             // 
             // btnExit
             // 
             this.btnExit.BackColor = System.Drawing.Color.IndianRed;
+            this.btnExit.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.btnExit.ForeColor = System.Drawing.SystemColors.Control;
-            this.btnExit.Location = new System.Drawing.Point(911, 411);
+            this.btnExit.Location = new System.Drawing.Point(907, 411);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(75, 23);
             this.btnExit.TabIndex = 15;
@@ -100,7 +104,8 @@
             // btnSaveDB
             // 
             this.btnSaveDB.BackColor = System.Drawing.Color.LemonChiffon;
-            this.btnSaveDB.Location = new System.Drawing.Point(669, 412);
+            this.btnSaveDB.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSaveDB.Location = new System.Drawing.Point(505, 411);
             this.btnSaveDB.Name = "btnSaveDB";
             this.btnSaveDB.Size = new System.Drawing.Size(75, 23);
             this.btnSaveDB.TabIndex = 20;
@@ -118,7 +123,8 @@
             // btnABSS
             // 
             this.btnABSS.BackColor = System.Drawing.Color.LightGreen;
-            this.btnABSS.Location = new System.Drawing.Point(780, 412);
+            this.btnABSS.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnABSS.Location = new System.Drawing.Point(786, 412);
             this.btnABSS.Name = "btnABSS";
             this.btnABSS.Size = new System.Drawing.Size(95, 23);
             this.btnABSS.TabIndex = 22;
@@ -126,12 +132,25 @@
             this.btnABSS.UseVisualStyleBackColor = false;
             this.btnABSS.Click += new System.EventHandler(this.btnABSS_Click);
             // 
+            // btnWooCommerce
+            // 
+            this.btnWooCommerce.BackColor = System.Drawing.Color.Orange;
+            this.btnWooCommerce.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnWooCommerce.Location = new System.Drawing.Point(606, 411);
+            this.btnWooCommerce.Name = "btnWooCommerce";
+            this.btnWooCommerce.Size = new System.Drawing.Size(154, 23);
+            this.btnWooCommerce.TabIndex = 23;
+            this.btnWooCommerce.Text = "Upload to WooCommerce";
+            this.btnWooCommerce.UseVisualStyleBackColor = false;
+            this.btnWooCommerce.Click += new System.EventHandler(this.btnWooCommerce_Click);
+            // 
             // frmList
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.Bisque;
             this.ClientSize = new System.Drawing.Size(1000, 457);
+            this.Controls.Add(this.btnWooCommerce);
             this.Controls.Add(this.btnABSS);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.btnSaveDB);
@@ -160,5 +179,6 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Button btnABSS;
         private System.Windows.Forms.BindingSource source;
+        private System.Windows.Forms.Button btnWooCommerce;
     }
 }

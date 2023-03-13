@@ -169,5 +169,26 @@ namespace WooCommerceAddOn
             frmLicense frmLicense = new frmLicense(comInfo);
             frmLicense.ShowDialog();
         }
+
+        private void btnGetAbssOrder_Click(object sender, EventArgs e)
+        {
+            comInfo.dataType = DataType.AbssOrder;
+            frmList frmList = new(comInfo);
+            frmList.ShowDialog();
+        }
+
+        private void btnGetAbssProduct_Click(object sender, EventArgs e)
+        {
+            comInfo.dataType = DataType.AbssProduct;
+            frmList frmList = new(comInfo);
+            frmList.ShowDialog();
+        }
+
+        private void btnGetAbssCustomer_Click(object sender, EventArgs e)
+        {
+            comInfo.dataType = DataType.AbssCustomer;
+            frmList frmList = new(comInfo);
+            frmList.ShowDialog();
+        }
     }
 }
