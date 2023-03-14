@@ -37,7 +37,7 @@ namespace WooCommerceAddOn
         private int CustomerNameLength { get { return int.Parse(ConfigurationManager.AppSettings["CustomerNameLength"]); } }
         private int CustomerCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["CustomerCodeLength"]); } }
         private int AccountProfileId { get { return int.Parse(ConfigurationManager.AppSettings["AccountProfileId"]); } }
-        //private bool isDemo { get { return ConfigurationManager.AppSettings["Demo"] == "1"; } }
+        
         private DataType type { get; set; }
         private int PageSize = int.Parse(ConfigurationManager.AppSettings["PageLength"]);
         private int PageBatchSize = int.Parse(ConfigurationManager.AppSettings["PageBatchSize"]);
@@ -64,6 +64,9 @@ namespace WooCommerceAddOn
             this.comInfo = comInfo;
             type = comInfo.dataType;
             abss = new ABSSModel();
+            var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
+            rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+
             if (type.ToString().StartsWith("Abss"))
             {
                 btnABSS.Enabled = false;
@@ -79,9 +82,7 @@ namespace WooCommerceAddOn
                 //lblTotal.Visible = true;
             }
             else
-            {
-                var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
-                rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+            {                
                 btnWooCommerce.Enabled = false;
                 //lblTotal.Visible = false;
             }
@@ -124,16 +125,7 @@ namespace WooCommerceAddOn
             decimal totalpages = 0;
 
             switch (type)
-            {
-                case DataType.AbssCustomer:
-                    AbssCustomers = MYOBHelper.GetCustomerList(abss);                   
-                    progressBar1.Visible = false;
-                    totalpages = AbssCustomers.Count / PageSize;
-                    TotalPage = (int)Math.Ceiling(totalpages);
-                    var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);                    
-                    source = new BindingSource(bindingList_abssC, null);                   
-                    break;
+            {                
                 case DataType.AbssProduct:
                     AbssProducts = MYOBHelper.GetItemList(abss);
                     progressBar1.Visible = false;
@@ -143,9 +135,7 @@ namespace WooCommerceAddOn
                     BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
                     source = new BindingSource(bindingList_abssP, null);
                     break;
-                case DataType.AbssOrder:
-
-                    break;
+                
                 case DataType.Product:
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
@@ -209,6 +199,20 @@ namespace WooCommerceAddOn
         {
             switch (type)
             {
+                case DataType.AbssProduct:
+                    #region remove current data first:
+                    MyobItemEditModel.RemoveAll();
+                    #endregion
+
+                    #region add data:
+                    bool bok = await MyobItemEditModel.AddList(AbssProducts, comInfo.AccountProfileId);
+                    if (bok)
+                    {
+                        progressBar1.Visible = false;
+                        MessageBox.Show(string.Format("{0} Saved.", DataType.Product.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }                   
+                    #endregion
+                    break;
                 case DataType.Product:
 
                     if (Products.Count == 0)
@@ -239,7 +243,7 @@ namespace WooCommerceAddOn
                         }
                         if (itemlist.Count > 0)
                         {
-                            await ItemEditModel.AddList(itemlist);
+                            await ItemEditModel.AddList(itemlist, comInfo.AccountProfileId);
                             progressBar1.Visible = false;
                         }
                         #endregion
@@ -1438,9 +1442,9 @@ namespace WooCommerceAddOn
         }
 
 
-        private void btnWooCommerce_Click(object sender, EventArgs e)
+        private async void btnWooCommerce_Click(object sender, EventArgs e)
         {
-
+            await MyobItemEditModel.UpdateWoo(rest);
         }
     }
 }

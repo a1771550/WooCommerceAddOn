@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using WADAL;
 using WALib.Models;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace WooCommerceAddOn
 {
@@ -25,24 +26,6 @@ namespace WooCommerceAddOn
             InitializeComponent();
         }
 
-
-        private static ComInfoModel GetCachedComInfo(string username)
-        {
-            ObjectCache cache = MemoryCache.Default;
-            if (cache.Contains(CacheKey))
-            {
-                return (ComInfoModel)cache.Get(CacheKey);
-            }
-            else
-            {
-                var combo = ComInfoEditModel.GetByName(username);
-                // Store data in the cache    
-                CacheItemPolicy cacheItemPolicy = new CacheItemPolicy();
-                cacheItemPolicy.AbsoluteExpiration = DateTime.Now.AddHours(1.0);
-                cache.Add(CacheKey, combo, cacheItemPolicy);
-                return combo;
-            }
-        }
         private void frmMain_Load(object sender, EventArgs e)
         {
             frmLogin frmlogin = new frmLogin();
@@ -51,7 +34,6 @@ namespace WooCommerceAddOn
             {
                 UserName = frmlogin.UserName;
                 comInfo = ComInfoEditModel.GetByName(UserName);
-                //comInfo = GetCachedComInfo(UserName);
 
                 if (comInfo == null)
                 {
@@ -77,7 +59,7 @@ namespace WooCommerceAddOn
                             if (frmDevice.dialogResult == DialogResult.OK)
                             {
                                 DeviceId = frmDevice.DeviceID;
-                                comInfo = ComInfoEditModel.Get(DeviceId);
+                                comInfo = ComInfoEditModel.GetByDevice(DeviceId);
 
                                 if (comInfo == null)
                                 {
@@ -103,18 +85,33 @@ namespace WooCommerceAddOn
 
                             }
                         }
-                        else
+                        else if (comInfo.waLicenseDateEnd <= CommonLib.Helpers.CommonHelper.GetDateTime())
                         {
-                            if (comInfo.waLicenseDateEnd <= CommonLib.Helpers.CommonHelper.GetDateTime())
+                            var result = MessageBox.Show("Your License is end. Please contact us if you want to extend your license.", "License", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            if (result == DialogResult.OK)
                             {
-                                var result = MessageBox.Show("Your License is end. Please contact us if you want to extend your license.", "License", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                if (result == DialogResult.OK)
-                                {
-                                    Application.Exit();
-                                }
+                                Application.Exit();
                             }
                         }
-                    } 
+                        else
+                        {
+                            for (int i = 0; i < 24; i++)
+                            {
+                                var _i = i < 10 ? i.ToString("D2") : i.ToString();
+                                var _item0 = string.Concat(_i, ":00");
+                                var _item1 = string.Concat(_i, ":30");
+                                comIntervalTimes.Items.Add(_item0);
+                                comIntervalTimes.Items.Add(_item1);
+                            }
+
+                            if(comInfo.schedule_times!=null)
+                                comIntervalTimes.SelectedIndex = comIntervalTimes.FindStringExact(comInfo.schedule_times);
+                            if (comInfo.schedule_days != null)
+                            {
+                                comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -148,7 +145,6 @@ namespace WooCommerceAddOn
 
         private void btnEditRegisteredData_Click(object sender, EventArgs e)
         {
-            //comInfo = GetCachedComInfo(UserName);
             comInfo = ComInfoEditModel.GetByName(UserName);
             frmActivation frmActivation = new frmActivation(comInfo, false);
             frmActivation.Text = "Registration Data";
@@ -189,6 +185,17 @@ namespace WooCommerceAddOn
             comInfo.dataType = DataType.AbssCustomer;
             frmList frmList = new(comInfo);
             frmList.ShowDialog();
+        }
+
+        private void btnSaveSchedule_Click(object sender, EventArgs e)
+        {
+            using var context = new WADbContext();
+            var cominfo = context.ComInfoes.Find(comInfo.Id);
+            cominfo.schedule_days = comIntervalDays.SelectedItem.ToString();
+            cominfo.schedule_times = comIntervalTimes.SelectedItem.ToString();
+            context.SaveChanges();
+
+            MessageBox.Show("Schedule Saved", "Data Update Schedule", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

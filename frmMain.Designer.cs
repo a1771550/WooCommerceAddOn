@@ -37,11 +37,15 @@
             this.btnLicense = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
             this.panel2 = new System.Windows.Forms.Panel();
-            this.btnGetAbssOrder = new System.Windows.Forms.Button();
             this.btnGetAbssProduct = new System.Windows.Forms.Button();
-            this.btnGetAbssCustomer = new System.Windows.Forms.Button();
+            this.lblSchedule = new System.Windows.Forms.Label();
+            this.comIntervalDays = new System.Windows.Forms.ComboBox();
+            this.comIntervalTimes = new System.Windows.Forms.ComboBox();
+            this.panel3 = new System.Windows.Forms.Panel();
+            this.btnSaveSchedule = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
+            this.panel3.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnGetOrder
@@ -84,7 +88,7 @@
             // 
             this.btnEditRegisteredData.BackColor = System.Drawing.Color.Navy;
             this.btnEditRegisteredData.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.btnEditRegisteredData.Location = new System.Drawing.Point(188, 12);
+            this.btnEditRegisteredData.Location = new System.Drawing.Point(334, 177);
             this.btnEditRegisteredData.Name = "btnEditRegisteredData";
             this.btnEditRegisteredData.Size = new System.Drawing.Size(145, 23);
             this.btnEditRegisteredData.TabIndex = 4;
@@ -96,7 +100,7 @@
             // 
             this.btnExit.BackColor = System.Drawing.Color.IndianRed;
             this.btnExit.ForeColor = System.Drawing.SystemColors.Control;
-            this.btnExit.Location = new System.Drawing.Point(424, 12);
+            this.btnExit.Location = new System.Drawing.Point(404, 206);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(75, 23);
             this.btnExit.TabIndex = 5;
@@ -108,7 +112,7 @@
             // 
             this.btnLicense.BackColor = System.Drawing.SystemColors.ControlDarkDark;
             this.btnLicense.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.btnLicense.Location = new System.Drawing.Point(11, 12);
+            this.btnLicense.Location = new System.Drawing.Point(253, 177);
             this.btnLicense.Name = "btnLicense";
             this.btnLicense.Size = new System.Drawing.Size(75, 23);
             this.btnLicense.TabIndex = 6;
@@ -123,7 +127,7 @@
             this.panel1.Controls.Add(this.btnGetOrder);
             this.panel1.Controls.Add(this.btnGetItem);
             this.panel1.Controls.Add(this.btnGetCustomer);
-            this.panel1.Location = new System.Drawing.Point(11, 63);
+            this.panel1.Location = new System.Drawing.Point(11, 15);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(216, 146);
             this.panel1.TabIndex = 8;
@@ -132,31 +136,17 @@
             // 
             this.panel2.BackColor = System.Drawing.Color.Lavender;
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel2.Controls.Add(this.btnGetAbssOrder);
             this.panel2.Controls.Add(this.btnGetAbssProduct);
-            this.panel2.Controls.Add(this.btnGetAbssCustomer);
-            this.panel2.Location = new System.Drawing.Point(283, 63);
+            this.panel2.Location = new System.Drawing.Point(12, 177);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(216, 146);
+            this.panel2.Size = new System.Drawing.Size(216, 55);
             this.panel2.TabIndex = 9;
-            // 
-            // btnGetAbssOrder
-            // 
-            this.btnGetAbssOrder.BackColor = System.Drawing.Color.SpringGreen;
-            this.btnGetAbssOrder.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnGetAbssOrder.Location = new System.Drawing.Point(16, 14);
-            this.btnGetAbssOrder.Name = "btnGetAbssOrder";
-            this.btnGetAbssOrder.Size = new System.Drawing.Size(181, 23);
-            this.btnGetAbssOrder.TabIndex = 0;
-            this.btnGetAbssOrder.Text = "Retrieve ABSS Order";
-            this.btnGetAbssOrder.UseVisualStyleBackColor = false;
-            this.btnGetAbssOrder.Click += new System.EventHandler(this.btnGetAbssOrder_Click);
             // 
             // btnGetAbssProduct
             // 
             this.btnGetAbssProduct.BackColor = System.Drawing.Color.SpringGreen;
             this.btnGetAbssProduct.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnGetAbssProduct.Location = new System.Drawing.Point(16, 58);
+            this.btnGetAbssProduct.Location = new System.Drawing.Point(18, 16);
             this.btnGetAbssProduct.Name = "btnGetAbssProduct";
             this.btnGetAbssProduct.Size = new System.Drawing.Size(181, 23);
             this.btnGetAbssProduct.TabIndex = 2;
@@ -164,24 +154,73 @@
             this.btnGetAbssProduct.UseVisualStyleBackColor = false;
             this.btnGetAbssProduct.Click += new System.EventHandler(this.btnGetAbssProduct_Click);
             // 
-            // btnGetAbssCustomer
+            // lblSchedule
             // 
-            this.btnGetAbssCustomer.BackColor = System.Drawing.Color.SpringGreen;
-            this.btnGetAbssCustomer.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnGetAbssCustomer.Location = new System.Drawing.Point(16, 102);
-            this.btnGetAbssCustomer.Name = "btnGetAbssCustomer";
-            this.btnGetAbssCustomer.Size = new System.Drawing.Size(181, 23);
-            this.btnGetAbssCustomer.TabIndex = 3;
-            this.btnGetAbssCustomer.Text = "Retrieve ABSS Customer";
-            this.btnGetAbssCustomer.UseVisualStyleBackColor = false;
-            this.btnGetAbssCustomer.Click += new System.EventHandler(this.btnGetAbssCustomer_Click);
+            this.lblSchedule.AutoSize = true;
+            this.lblSchedule.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.lblSchedule.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+            this.lblSchedule.Location = new System.Drawing.Point(17, 14);
+            this.lblSchedule.Name = "lblSchedule";
+            this.lblSchedule.Size = new System.Drawing.Size(140, 13);
+            this.lblSchedule.TabIndex = 11;
+            this.lblSchedule.Text = "Data Update Schedule:";
+            // 
+            // comIntervalDays
+            // 
+            this.comIntervalDays.DropDownWidth = 80;
+            this.comIntervalDays.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.comIntervalDays.FormattingEnabled = true;
+            this.comIntervalDays.Items.AddRange(new object[] {
+            "Daily",
+            "Weekly",
+            "Monthly"});
+            this.comIntervalDays.Location = new System.Drawing.Point(20, 52);
+            this.comIntervalDays.Name = "comIntervalDays";
+            this.comIntervalDays.Size = new System.Drawing.Size(79, 21);
+            this.comIntervalDays.TabIndex = 12;
+            // 
+            // comIntervalTimes
+            // 
+            this.comIntervalTimes.DropDownWidth = 80;
+            this.comIntervalTimes.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.comIntervalTimes.FormattingEnabled = true;
+            this.comIntervalTimes.Location = new System.Drawing.Point(124, 52);
+            this.comIntervalTimes.Name = "comIntervalTimes";
+            this.comIntervalTimes.Size = new System.Drawing.Size(75, 21);
+            this.comIntervalTimes.TabIndex = 13;
+            // 
+            // panel3
+            // 
+            this.panel3.BackColor = System.Drawing.SystemColors.Highlight;
+            this.panel3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel3.Controls.Add(this.btnSaveSchedule);
+            this.panel3.Controls.Add(this.lblSchedule);
+            this.panel3.Controls.Add(this.comIntervalTimes);
+            this.panel3.Controls.Add(this.comIntervalDays);
+            this.panel3.Location = new System.Drawing.Point(253, 15);
+            this.panel3.Name = "panel3";
+            this.panel3.Size = new System.Drawing.Size(226, 146);
+            this.panel3.TabIndex = 14;
+            // 
+            // btnSaveSchedule
+            // 
+            this.btnSaveSchedule.BackColor = System.Drawing.Color.PeachPuff;
+            this.btnSaveSchedule.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSaveSchedule.Location = new System.Drawing.Point(124, 102);
+            this.btnSaveSchedule.Name = "btnSaveSchedule";
+            this.btnSaveSchedule.Size = new System.Drawing.Size(75, 23);
+            this.btnSaveSchedule.TabIndex = 14;
+            this.btnSaveSchedule.Text = "Save";
+            this.btnSaveSchedule.UseVisualStyleBackColor = false;
+            this.btnSaveSchedule.Click += new System.EventHandler(this.btnSaveSchedule_Click);
             // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(511, 226);
+            this.ClientSize = new System.Drawing.Size(502, 244);
+            this.Controls.Add(this.panel3);
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.btnLicense);
@@ -193,6 +232,8 @@
             this.Load += new System.EventHandler(this.frmMain_Load);
             this.panel1.ResumeLayout(false);
             this.panel2.ResumeLayout(false);
+            this.panel3.ResumeLayout(false);
+            this.panel3.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -207,9 +248,12 @@
         private System.Windows.Forms.Button btnLicense;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Panel panel2;
-        private System.Windows.Forms.Button btnGetAbssOrder;
         private System.Windows.Forms.Button btnGetAbssProduct;
-        private System.Windows.Forms.Button btnGetAbssCustomer;
+        private System.Windows.Forms.Label lblSchedule;
+        private System.Windows.Forms.ComboBox comIntervalDays;
+        private System.Windows.Forms.ComboBox comIntervalTimes;
+        private System.Windows.Forms.Panel panel3;
+        private System.Windows.Forms.Button btnSaveSchedule;
     }
 }
 
