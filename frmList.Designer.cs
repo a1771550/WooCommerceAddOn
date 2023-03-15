@@ -40,6 +40,8 @@
             this.btnABSS = new System.Windows.Forms.Button();
             this.source = new System.Windows.Forms.BindingSource(this.components);
             this.btnWooCommerce = new System.Windows.Forms.Button();
+            this.lblTotal = new System.Windows.Forms.Label();
+            this.iTotal = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dgList)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.source)).BeginInit();
@@ -144,12 +146,34 @@
             this.btnWooCommerce.UseVisualStyleBackColor = false;
             this.btnWooCommerce.Click += new System.EventHandler(this.btnWooCommerce_Click);
             // 
+            // lblTotal
+            // 
+            this.lblTotal.AutoSize = true;
+            this.lblTotal.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.lblTotal.Location = new System.Drawing.Point(12, 432);
+            this.lblTotal.Name = "lblTotal";
+            this.lblTotal.Size = new System.Drawing.Size(40, 13);
+            this.lblTotal.TabIndex = 24;
+            this.lblTotal.Text = "Total:";
+            // 
+            // iTotal
+            // 
+            this.iTotal.AutoSize = true;
+            this.iTotal.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.iTotal.ForeColor = System.Drawing.Color.RoyalBlue;
+            this.iTotal.Location = new System.Drawing.Point(58, 432);
+            this.iTotal.Name = "iTotal";
+            this.iTotal.Size = new System.Drawing.Size(0, 13);
+            this.iTotal.TabIndex = 25;
+            // 
             // frmList
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.Bisque;
             this.ClientSize = new System.Drawing.Size(1000, 457);
+            this.Controls.Add(this.iTotal);
+            this.Controls.Add(this.lblTotal);
             this.Controls.Add(this.btnWooCommerce);
             this.Controls.Add(this.btnABSS);
             this.Controls.Add(this.progressBar1);
@@ -165,6 +189,7 @@
             this.panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.source)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -180,5 +205,7 @@
         private System.Windows.Forms.Button btnABSS;
         private System.Windows.Forms.BindingSource source;
         private System.Windows.Forms.Button btnWooCommerce;
+        private System.Windows.Forms.Label lblTotal;
+        private System.Windows.Forms.Label iTotal;
     }
 }

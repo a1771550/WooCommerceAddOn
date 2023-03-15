@@ -33,11 +33,10 @@ namespace WooCommerceAddOn
         public Dictionary<string, string> FouledProductNameList { get; set; }
         private ComInfoModel comInfo { get; set; }
         //private string DeviceId { get; set; }
-        private List<int> CheckOutIds { get; set; }
-        private int CustomerNameLength { get { return int.Parse(ConfigurationManager.AppSettings["CustomerNameLength"]); } }
+        private List<int> CheckOutIds { get; set; }        
         private int CustomerCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["CustomerCodeLength"]); } }
         private int AccountProfileId { get { return int.Parse(ConfigurationManager.AppSettings["AccountProfileId"]); } }
-        
+
         private DataType type { get; set; }
         private int PageSize = int.Parse(ConfigurationManager.AppSettings["PageLength"]);
         private int PageBatchSize = int.Parse(ConfigurationManager.AppSettings["PageBatchSize"]);
@@ -48,14 +47,10 @@ namespace WooCommerceAddOn
         //private int Page = 1;
         private List<MyobCustomerModel> AbssCustomers { get; set; }
         private List<MyobItemModel> AbssProducts { get; set; }
-        private List<SalesModel> AbssOrders { get; set; }
         private List<Customer> Customers { get; set; }
         private List<Order> Orders { get; set; }
         private List<Product> Products { get; set; }
         private ABSSModel abss { get; set; }
-        //private List<CustomerModel> CurrentWooCustomerList { get; set; }
-        //private List<ItemModel> CurrentWooItemList { get; set; }
-        //private List<SalesLnView> CurrentWooSalesList { get; set; }
         private RestAPI rest { get; set; }
         //RestAPI rest = new RestAPI(string.Format("{0}/wp-json/wc/v3/", endpoint), key, secret);
         public frmList(ComInfoModel comInfo)
@@ -82,25 +77,17 @@ namespace WooCommerceAddOn
                 //lblTotal.Visible = true;
             }
             else
-            {                
+            {
                 btnWooCommerce.Enabled = false;
                 //lblTotal.Visible = false;
             }
 
             switch (type)
-            {
-                case DataType.AbssCustomer:
-                    AbssCustomers = new List<MyobCustomerModel>();
-                    this.Text = "ABSS Customer List";
-                    break;
+            {           
                 case DataType.AbssProduct:
                     AbssProducts = new List<MyobItemModel>();
                     this.Text = "ABSS Product List";
-                    break;
-                case DataType.AbssOrder:
-                    AbssOrders = new List<SalesModel>();
-                    this.Text = "ABSS Order List";
-                    break;
+                    break;               
                 case DataType.Product:
                     Products = new List<Product>();
                     this.Text = "WooCommerce Product List";
@@ -115,7 +102,7 @@ namespace WooCommerceAddOn
                     this.Text = "WooCommerce Order List";
                     break;
             }
-            
+
         }
 
         private async void frmList_Load(object sender, EventArgs e)
@@ -125,7 +112,7 @@ namespace WooCommerceAddOn
             decimal totalpages = 0;
 
             switch (type)
-            {                
+            {
                 case DataType.AbssProduct:
                     AbssProducts = MYOBHelper.GetItemList(abss);
                     progressBar1.Visible = false;
@@ -134,13 +121,15 @@ namespace WooCommerceAddOn
                     var mproducts = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                     BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
                     source = new BindingSource(bindingList_abssP, null);
+                    iTotal.Text = AbssProducts.Count.ToString();
                     break;
-                
+
                 case DataType.Product:
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
                         var _products = await ModelHelper.GetWooProduct(rest, i);
-                        Products.AddRange(_products);
+                        if (_products != null && _products.Count > 0)
+                            Products.AddRange(_products);
                     }
                     progressBar1.Visible = false;
                     totalpages = Products.Count / PageSize;
@@ -151,12 +140,14 @@ namespace WooCommerceAddOn
 
                     BindingList<Product> bindingList_P = new BindingList<Product>(products);
                     source = new BindingSource(bindingList_P, null);
+                    iTotal.Text = Products.Count.ToString();
                     break;
                 case DataType.Customer:
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
-                        var _products = await ModelHelper.GetWooCustomer(rest, CustomerRole.all, i);
-                        Customers.AddRange(_products);
+                        var _customers = await ModelHelper.GetWooCustomer(rest, CustomerRole.all, i);
+                        if (_customers != null && _customers.Count > 0)
+                            Customers.AddRange(_customers);
                     }
                     progressBar1.Visible = false;
                     totalpages = Customers.Count / PageSize;
@@ -168,13 +159,15 @@ namespace WooCommerceAddOn
 
                     BindingList<Customer> bindingList_C = new BindingList<Customer>(customers);
                     source = new BindingSource(bindingList_C, null);
+                    iTotal.Text = Customers.Count.ToString();
                     break;
                 default:
                 case DataType.Order:
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
-                        var _products = await ModelHelper.GetWooOrder(rest, i);
-                        Orders.AddRange(_products);
+                        var _orders = await ModelHelper.GetWooOrder(rest, i);
+                        if (_orders != null && _orders.Count > 0)
+                            Orders.AddRange(_orders);
                     }
                     progressBar1.Visible = false;
                     totalpages = Orders.Count / PageSize;
@@ -184,14 +177,15 @@ namespace WooCommerceAddOn
                     var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                     BindingList<Order> bindingList_O = new BindingList<Order>(orders);
                     source = new BindingSource(bindingList_O, null);
+                    iTotal.Text = Orders.Count.ToString();
                     break;
 
             }
-            dgList.DataSource = source;           
+            dgList.DataSource = source;
             this.dgList.ReadOnly = true;
-            if(type== DataType.AbssCustomer)
+            if (type == DataType.AbssCustomer)
             {
-                dgList.Columns[0].Visible=false;
+                dgList.Columns[0].Visible = false;
             }
         }
 
@@ -210,7 +204,7 @@ namespace WooCommerceAddOn
                     {
                         progressBar1.Visible = false;
                         MessageBox.Show(string.Format("{0} Saved.", DataType.Product.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }                   
+                    }
                     #endregion
                     break;
                 case DataType.Product:
@@ -1107,22 +1101,6 @@ namespace WooCommerceAddOn
             };
         }
 
-        private async Task<int> GetCustomerPointFrmOrders(long customerId)
-        {
-            Orders = new List<Order>();
-            Orders = await ModelHelper.GetWooOrder(rest);
-            var points = 0;
-            var oc = Orders.Where(x => x.customer_id == (ulong)customerId).FirstOrDefault();
-            if (oc != null)
-            {
-                if (int.TryParse(oc.total.ToString(), out points))
-                {
-                    return points;
-                }
-            }
-            return points;
-        }
-
         private async Task<AbssResult> WriteItemToABSS()
         {
             var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
@@ -1174,9 +1152,6 @@ namespace WooCommerceAddOn
 
                             ModelHelper.WriteLog(context, string.Format("sql:{0};Success:{1};retmsg:{2}", sql, result.Success, result.Message), "Upload Item to ABSS");
 
-
-
-
                             await context.SaveChangesAsync();
                             await HandleCheckOutIds(CheckOutIds, context, DataType.Product);
                             transaction.Commit();
@@ -1188,11 +1163,7 @@ namespace WooCommerceAddOn
                             throw new Exception(ex.Message);
                         }
                     }
-
-
                 }
-
-
             }
 
         }
@@ -1313,29 +1284,6 @@ namespace WooCommerceAddOn
             return done;
         }
 
-        private void CalculateTotalPages()
-        {
-            int rowCount;
-            switch (type)
-            {
-                case DataType.Product:
-                    rowCount = Products.Count;
-                    break;
-                case DataType.Customer:
-                    rowCount = Customers.Count;
-                    break;
-                default:
-                case DataType.Order:
-                    rowCount = Orders.Count;
-                    break;
-            }
-
-            TotalPage = rowCount / PageSize;
-            if (rowCount % PageSize > 0) // if remainder is more than  zero 
-            {
-                TotalPage += 1;
-            }
-        }
 
         private BindingSource GetCurrentRecordsABSS()
         {
@@ -1354,7 +1302,7 @@ namespace WooCommerceAddOn
                 case DataType.AbssOrder:
                     var bindingList_O = new BindingList<SalesModel>();
                     return new BindingSource(bindingList_O, null);
-            }            
+            }
         }
         private BindingSource GetCurrentRecords()
         {
@@ -1389,7 +1337,7 @@ namespace WooCommerceAddOn
                 {
                     this.dgList.DataSource = GetCurrentRecords();
                 }
-                
+
             }
         }
 
@@ -1406,7 +1354,7 @@ namespace WooCommerceAddOn
                 {
                     this.dgList.DataSource = GetCurrentRecords();
                 }
-                    
+
             }
         }
 
@@ -1444,7 +1392,15 @@ namespace WooCommerceAddOn
 
         private async void btnWooCommerce_Click(object sender, EventArgs e)
         {
-            await MyobItemEditModel.UpdateWoo(rest);
+            progressBar1.Visible = true;
+            progressBar1.Style = ProgressBarStyle.Marquee;
+            var bok = await MyobItemEditModel.UpdateWoo(rest);
+            if (bok)
+            {
+                progressBar1.Visible = false;
+                MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+                
         }
     }
 }

@@ -43,9 +43,15 @@
             this.comIntervalTimes = new System.Windows.Forms.ComboBox();
             this.panel3 = new System.Windows.Forms.Panel();
             this.btnSaveSchedule = new System.Windows.Forms.Button();
+            this.lblProdCat = new System.Windows.Forms.Label();
+            this.comProdCat = new System.Windows.Forms.ComboBox();
+            this.panel4 = new System.Windows.Forms.Panel();
+            this.btnSaveCat = new System.Windows.Forms.Button();
+            this.btnUpdateCat = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.panel3.SuspendLayout();
+            this.panel4.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnGetOrder
@@ -88,7 +94,7 @@
             // 
             this.btnEditRegisteredData.BackColor = System.Drawing.Color.Navy;
             this.btnEditRegisteredData.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.btnEditRegisteredData.Location = new System.Drawing.Point(334, 177);
+            this.btnEditRegisteredData.Location = new System.Drawing.Point(175, 331);
             this.btnEditRegisteredData.Name = "btnEditRegisteredData";
             this.btnEditRegisteredData.Size = new System.Drawing.Size(145, 23);
             this.btnEditRegisteredData.TabIndex = 4;
@@ -100,7 +106,7 @@
             // 
             this.btnExit.BackColor = System.Drawing.Color.IndianRed;
             this.btnExit.ForeColor = System.Drawing.SystemColors.Control;
-            this.btnExit.Location = new System.Drawing.Point(404, 206);
+            this.btnExit.Location = new System.Drawing.Point(404, 331);
             this.btnExit.Name = "btnExit";
             this.btnExit.Size = new System.Drawing.Size(75, 23);
             this.btnExit.TabIndex = 5;
@@ -112,7 +118,7 @@
             // 
             this.btnLicense.BackColor = System.Drawing.SystemColors.ControlDarkDark;
             this.btnLicense.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.btnLicense.Location = new System.Drawing.Point(253, 177);
+            this.btnLicense.Location = new System.Drawing.Point(11, 331);
             this.btnLicense.Name = "btnLicense";
             this.btnLicense.Size = new System.Drawing.Size(75, 23);
             this.btnLicense.TabIndex = 6;
@@ -139,14 +145,14 @@
             this.panel2.Controls.Add(this.btnGetAbssProduct);
             this.panel2.Location = new System.Drawing.Point(12, 177);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(216, 55);
+            this.panel2.Size = new System.Drawing.Size(216, 129);
             this.panel2.TabIndex = 9;
             // 
             // btnGetAbssProduct
             // 
             this.btnGetAbssProduct.BackColor = System.Drawing.Color.SpringGreen;
             this.btnGetAbssProduct.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnGetAbssProduct.Location = new System.Drawing.Point(18, 16);
+            this.btnGetAbssProduct.Location = new System.Drawing.Point(16, 49);
             this.btnGetAbssProduct.Name = "btnGetAbssProduct";
             this.btnGetAbssProduct.Size = new System.Drawing.Size(181, 23);
             this.btnGetAbssProduct.TabIndex = 2;
@@ -214,12 +220,68 @@
             this.btnSaveSchedule.UseVisualStyleBackColor = false;
             this.btnSaveSchedule.Click += new System.EventHandler(this.btnSaveSchedule_Click);
             // 
+            // lblProdCat
+            // 
+            this.lblProdCat.AutoSize = true;
+            this.lblProdCat.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.lblProdCat.Location = new System.Drawing.Point(18, 13);
+            this.lblProdCat.Name = "lblProdCat";
+            this.lblProdCat.Size = new System.Drawing.Size(129, 13);
+            this.lblProdCat.TabIndex = 3;
+            this.lblProdCat.Text = "Default Product Category:";
+            // 
+            // comProdCat
+            // 
+            this.comProdCat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.comProdCat.FormattingEnabled = true;
+            this.comProdCat.Location = new System.Drawing.Point(21, 41);
+            this.comProdCat.Name = "comProdCat";
+            this.comProdCat.Size = new System.Drawing.Size(192, 21);
+            this.comProdCat.TabIndex = 4;
+            // 
+            // panel4
+            // 
+            this.panel4.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(192)))));
+            this.panel4.Controls.Add(this.btnSaveCat);
+            this.panel4.Controls.Add(this.btnUpdateCat);
+            this.panel4.Controls.Add(this.comProdCat);
+            this.panel4.Controls.Add(this.lblProdCat);
+            this.panel4.Location = new System.Drawing.Point(253, 177);
+            this.panel4.Name = "panel4";
+            this.panel4.Size = new System.Drawing.Size(226, 129);
+            this.panel4.TabIndex = 15;
+            // 
+            // btnSaveCat
+            // 
+            this.btnSaveCat.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+            this.btnSaveCat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSaveCat.Location = new System.Drawing.Point(138, 88);
+            this.btnSaveCat.Name = "btnSaveCat";
+            this.btnSaveCat.Size = new System.Drawing.Size(75, 23);
+            this.btnSaveCat.TabIndex = 6;
+            this.btnSaveCat.Text = "Confirm";
+            this.btnSaveCat.UseVisualStyleBackColor = false;
+            this.btnSaveCat.Click += new System.EventHandler(this.btnSaveCat_Click);
+            // 
+            // btnUpdateCat
+            // 
+            this.btnUpdateCat.BackColor = System.Drawing.Color.Ivory;
+            this.btnUpdateCat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnUpdateCat.Location = new System.Drawing.Point(21, 88);
+            this.btnUpdateCat.Name = "btnUpdateCat";
+            this.btnUpdateCat.Size = new System.Drawing.Size(75, 23);
+            this.btnUpdateCat.TabIndex = 5;
+            this.btnUpdateCat.Text = "Update";
+            this.btnUpdateCat.UseVisualStyleBackColor = false;
+            this.btnUpdateCat.Click += new System.EventHandler(this.btnUpdateCat_Click);
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.ClientSize = new System.Drawing.Size(502, 244);
+            this.ClientSize = new System.Drawing.Size(502, 375);
+            this.Controls.Add(this.panel4);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.panel1);
@@ -234,6 +296,8 @@
             this.panel2.ResumeLayout(false);
             this.panel3.ResumeLayout(false);
             this.panel3.PerformLayout();
+            this.panel4.ResumeLayout(false);
+            this.panel4.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -254,6 +318,11 @@
         private System.Windows.Forms.ComboBox comIntervalTimes;
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Button btnSaveSchedule;
+        private System.Windows.Forms.ComboBox comProdCat;
+        private System.Windows.Forms.Label lblProdCat;
+        private System.Windows.Forms.Panel panel4;
+        private System.Windows.Forms.Button btnSaveCat;
+        private System.Windows.Forms.Button btnUpdateCat;
     }
 }
 

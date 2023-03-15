@@ -1,16 +1,14 @@
 ﻿using MYOBLib;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.Configuration;
 using System.Linq;
-using System.Runtime.Caching;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using WACommonLib.Models;
 using WADAL;
 using WALib.Models;
+using WooCommerceNET;
+using WooCommerceNET.WooCommerce.v3;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace WooCommerceAddOn
@@ -21,19 +19,29 @@ namespace WooCommerceAddOn
         public static string DeviceId { get; set; }
         public static string UserName { get; set; }
         private ComInfoModel comInfo { get; set; }
+        private RestAPI rest { get; set; }
+        //private int PageSize = int.Parse(ConfigurationManager.AppSettings["PageLength"]);
+        private int PageBatchSize = int.Parse(ConfigurationManager.AppSettings["PageBatchSize"]);
+        WaitWnd.WaitWndFun waitForm = new WaitWnd.WaitWndFun();
+        //private int CurrentPageIndex = 1;
+        //private int TotalPage = 0;
+        public int ExpectedTotal = 0;
+        public int ActualTotal = 0;
         public frmMain()
         {
             InitializeComponent();
         }
 
-        private void frmMain_Load(object sender, EventArgs e)
-        {
+        private async void frmMain_Load(object sender, EventArgs e)
+        {           
             frmLogin frmlogin = new frmLogin();
             frmlogin.ShowDialog();
             if (frmlogin.dialogResult == DialogResult.OK)
             {
                 UserName = frmlogin.UserName;
                 comInfo = ComInfoEditModel.GetByName(UserName);
+                var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
+                rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
 
                 if (comInfo == null)
                 {
@@ -110,6 +118,20 @@ namespace WooCommerceAddOn
                             {
                                 comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
                             }
+
+                            List<ProductCategory> catlist = await ItemEditModel.GetProductCategories(rest, PageBatchSize);
+                            foreach(var cat in catlist)
+                            {
+                                ComboBoxItem item = new ComboBoxItem
+                                {
+                                    Value=cat.id,
+                                    Text=cat.name
+                                };
+                                comProdCat.Items.Add(item);
+                            }
+                            if (comInfo.waDefaultProductCategory != null)
+                                comProdCat.SelectedIndex = comProdCat.Items.Cast<ComboBoxItem>().ToList().FindIndex(a => a.Value.ToString() == comInfo.waDefaultProductCategory.ToString());
+                            else comProdCat.SelectedIndex = 1;
                         }
                     }
                 }
@@ -196,6 +218,24 @@ namespace WooCommerceAddOn
             context.SaveChanges();
 
             MessageBox.Show("Schedule Saved", "Data Update Schedule", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnSaveCat_Click(object sender, EventArgs e)
+        {
+            ComboBoxItem item = comProdCat.SelectedItem as ComboBoxItem;
+            if (item != null)
+            {
+                ItemEditModel.SaveCategory(item, comInfo);
+                MessageBox.Show("Category Saved","Default Product Category", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private async void btnUpdateCat_Click(object sender, EventArgs e)
+        {            
+            waitForm.Show(this);
+            await ItemEditModel.UpdateWooCategories(rest, PageBatchSize);
+            MessageBox.Show("Category Updated", "Default Product Category", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            waitForm.Close();           
         }
     }
 }
