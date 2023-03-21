@@ -103,22 +103,21 @@ namespace WooCommerceAddOn
                         }
                         else
                         {
-                            for (int i = 0; i < 24; i++)
-                            {
-                                var _i = i < 10 ? i.ToString("D2") : i.ToString();
-                                var _item0 = string.Concat(_i, ":00");
-                                var _item1 = string.Concat(_i, ":30");
-                                comIntervalTimes.Items.Add(_item0);
-                                comIntervalTimes.Items.Add(_item1);
-                            }
+                            //for (int i = 0; i < 24; i++)
+                            //{
+                            //    var _i = i < 10 ? i.ToString("D2") : i.ToString();
+                            //    var _item0 = string.Concat(_i, ":00");
+                            //    var _item1 = string.Concat(_i, ":30");
+                            //    comIntervalTimes.Items.Add(_item0);
+                            //    comIntervalTimes.Items.Add(_item1);
+                            //}
 
-                            if(comInfo.schedule_times!=null)
-                                comIntervalTimes.SelectedIndex = comIntervalTimes.FindStringExact(comInfo.schedule_times);
-                            if (comInfo.schedule_days != null)
-                            {
-                                comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
-                            }
-
+                            //if(comInfo.schedule_times!=null)
+                            //    comIntervalTimes.SelectedIndex = comIntervalTimes.FindStringExact(comInfo.schedule_times);
+                            //if (comInfo.schedule_days != null)
+                            //{
+                            //    comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
+                            //}
                             List<ProductCategory> catlist = await ItemEditModel.GetProductCategories(rest, PageBatchSize);
                             foreach(var cat in catlist)
                             {
@@ -209,16 +208,16 @@ namespace WooCommerceAddOn
             frmList.ShowDialog();
         }
 
-        private void btnSaveSchedule_Click(object sender, EventArgs e)
-        {
-            using var context = new WADbContext();
-            var cominfo = context.ComInfoes.Find(comInfo.Id);
-            cominfo.schedule_days = comIntervalDays.SelectedItem.ToString();
-            cominfo.schedule_times = comIntervalTimes.SelectedItem.ToString();
-            context.SaveChanges();
+        //private void btnSaveSchedule_Click(object sender, EventArgs e)
+        //{
+        //    using var context = new WADbContext();
+        //    var cominfo = context.ComInfoes.Find(comInfo.Id);
+        //    cominfo.schedule_days = comIntervalDays.SelectedItem.ToString();
+        //    cominfo.schedule_times = comIntervalTimes.SelectedItem.ToString();
+        //    context.SaveChanges();
 
-            MessageBox.Show("Schedule Saved", "Data Update Schedule", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
+        //    MessageBox.Show("Schedule Saved", "Data Update Schedule", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        //}
 
         private void btnSaveCat_Click(object sender, EventArgs e)
         {

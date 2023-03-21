@@ -22,18 +22,20 @@ using System.Drawing.Printing;
 using System.Text.RegularExpressions;
 using CommonLib.Models.MYOB;
 using WALib.Models.MYOB;
+using WaitWnd;
+using System.Runtime.Remoting.Contexts;
 
 namespace WooCommerceAddOn
 {
     public partial class frmList : Form
     {
-        public Dictionary<string, string> FouledOrderIdList { get; set; }
+        public Dictionary<string, string> FouledOrderIdList;
         public Dictionary<int, string> FouledCustomerIdList { get; set; }
         private int MaxItemCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["ItemCodeLength"]); } }
-        public Dictionary<string, string> FouledProductNameList { get; set; }
+        public Dictionary<string, string> FouledProductNameList = new Dictionary<string, string>();
         private ComInfoModel comInfo { get; set; }
         //private string DeviceId { get; set; }
-        private List<int> CheckOutIds { get; set; }        
+        private List<int> CheckOutIds { get; set; }
         private int CustomerCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["CustomerCodeLength"]); } }
         private int AccountProfileId { get { return int.Parse(ConfigurationManager.AppSettings["AccountProfileId"]); } }
 
@@ -52,7 +54,8 @@ namespace WooCommerceAddOn
         private List<Product> Products { get; set; }
         private ABSSModel abss { get; set; }
         private RestAPI rest { get; set; }
-        //RestAPI rest = new RestAPI(string.Format("{0}/wp-json/wc/v3/", endpoint), key, secret);
+
+        WaitWndFun waitForm = new WaitWndFun();
         public frmList(ComInfoModel comInfo)
         {
             InitializeComponent();
@@ -83,11 +86,11 @@ namespace WooCommerceAddOn
             }
 
             switch (type)
-            {           
+            {
                 case DataType.AbssProduct:
                     AbssProducts = new List<MyobItemModel>();
                     this.Text = "ABSS Product List";
-                    break;               
+                    break;
                 case DataType.Product:
                     Products = new List<Product>();
                     this.Text = "WooCommerce Product List";
@@ -229,7 +232,7 @@ namespace WooCommerceAddOn
                         #region add data:
                         foreach (var i in Products)
                         {
-                            ItemModel item = PopulateItem(i);
+                            ItemModel item = ItemEditModel.PopulateItem(i, ref FouledProductNameList, MaxItemCodeLength, comInfo);
                             if (item != null)
                             {
                                 itemlist.Add(item);
@@ -237,7 +240,8 @@ namespace WooCommerceAddOn
                         }
                         if (itemlist.Count > 0)
                         {
-                            await ItemEditModel.AddList(itemlist, comInfo.AccountProfileId);
+                            using var context = new WADbContext();
+                            ItemEditModel.AddList(itemlist, comInfo.AccountProfileId, context);
                             progressBar1.Visible = false;
                         }
                         #endregion
@@ -302,9 +306,25 @@ namespace WooCommerceAddOn
                         }
                         if (customerlist.Count > 0)
                         {
-                            await CustomerEditModel.AddList(customerlist);
-                            progressBar1.Visible = false;
-                            MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            using (var context = new WADbContext())
+                            {
+                                using (var transaction = context.Database.BeginTransaction())
+                                {
+                                    try
+                                    {
+                                        await CustomerEditModel.AddList(customerlist, context);
+                                        transaction.Commit();
+                                        progressBar1.Visible = false;
+                                        MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        transaction.Rollback();
+                                        throw new Exception(ex.Message);
+                                    }
+                                }
+                            }
                         }
                         #endregion
                     }
@@ -347,40 +367,53 @@ namespace WooCommerceAddOn
 
                             if (neworders.Count > 0)
                             {
-                                List<int> abssMissingItemIdList = await AddSales(neworders, comInfo);
-                                progressBar1.Visible = false;
-                                if (abssMissingItemIdList.Count == 0)
+                                using (var context = new WADbContext())
                                 {
-                                    if (FouledOrderIdList.Count > 0)
+                                    using (var transaction = context.Database.BeginTransaction())
                                     {
-                                        StringBuilder sb = new StringBuilder();
-                                        foreach (var item in FouledOrderIdList)
+                                        try
                                         {
-                                            sb.AppendFormat("Order Number:{0} Reasons:{1}{2}", item.Key, item.Value, Environment.NewLine);
+                                            List<int> abssMissingItemIdList = ModelHelper.AddSales(neworders, comInfo, context, ref FouledOrderIdList);
+                                            progressBar1.Visible = false;
+                                            if (abssMissingItemIdList.Count == 0)
+                                            {
+                                                if (FouledOrderIdList.Count > 0)
+                                                {
+                                                    StringBuilder sb = new StringBuilder();
+                                                    foreach (var item in FouledOrderIdList)
+                                                    {
+                                                        sb.AppendFormat("Order Number:{0} Reasons:{1}{2}", item.Key, item.Value, Environment.NewLine);
+                                                    }
+                                                    var msg = string.Format("AddOn did not save the orders with reasons as follows:{0}{1}", Environment.NewLine, sb.ToString());
+                                                    msg += String.Format("{0} while other orders are saved.", Environment.NewLine);
+                                                    MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                                }
+                                                else
+                                                {
+                                                    MessageBox.Show(string.Format("{0} Saved.", DataType.Order.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                var list = ModelHelper.GetWooItemByIdList(abssMissingItemIdList, context);
+                                                List<string> namelist = new List<string>();
+                                                foreach (var item in list)
+                                                {
+                                                    namelist.Add(item.itmName);
+                                                }
+                                                string msg = string.Format("{0} Saved. Howerver, there is some information of WooCommerce products that ABSS is missing. These products are: {1}", DataType.Order.ToString(), string.Join(",", namelist));
+                                                MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                            }
                                         }
-                                        var msg = string.Format("AddOn did not save the orders with reasons as follows:{0}{1}", Environment.NewLine, sb.ToString());
-                                        msg += String.Format("{0} while other orders are saved.", Environment.NewLine);
-                                        MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    }
-                                    else
-                                    {
-                                        MessageBox.Show(string.Format("{0} Saved.", DataType.Order.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                        catch (Exception ex)
+                                        {
+                                            transaction.Rollback();
+                                            throw new Exception(ex.Message);
+                                        }
                                     }
                                 }
-                                else
-                                {
-                                    using (var context = new WADbContext())
-                                    {
-                                        var list = ModelHelper.GetWooItemByIdList(abssMissingItemIdList, context);
-                                        List<string> namelist = new List<string>();
-                                        foreach (var item in list)
-                                        {
-                                            namelist.Add(item.itmName);
-                                        }
-                                        string msg = string.Format("{0} Saved. Howerver, there is some information of WooCommerce products that ABSS is missing. These products are: {1}", DataType.Order.ToString(), string.Join(",", namelist));
-                                        MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    }
-                                }
+
                             }
                             else
                             {
@@ -429,7 +462,6 @@ namespace WooCommerceAddOn
                             }
                         }
                     }
-
                     break;
                 case DataType.Customer:
                     if (CustomerEditModel.GetWooCustomerCount(AccountProfileId) == 0)
@@ -496,7 +528,19 @@ namespace WooCommerceAddOn
                     break;
             }
         }
-
+        private async void btnWooCommerce_Click(object sender, EventArgs e)
+        {
+            waitForm.Show(this);
+            progressBar1.Visible = true;
+            progressBar1.Style = ProgressBarStyle.Marquee;
+            var bok = await MyobItemEditModel.UpdateWoo(rest, comInfo);
+            waitForm.Close();
+            if (bok)
+            {
+                progressBar1.Visible = false;
+                MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
 
         private async Task<AbssResult> WriteSalesToABSS(frmSalesDate frmSalesDate, bool includeUploaded)
         {
@@ -718,7 +762,7 @@ namespace WooCommerceAddOn
                                 }
                             }
 
-                            await HandleCheckOutIds(CheckOutIds, context, DataType.Order);
+                            await ModelHelper.HandleCheckOutIds(CheckOutIds, context, DataType.Order);
                             transaction.Commit();
                             return result;
                         }
@@ -735,375 +779,13 @@ namespace WooCommerceAddOn
             return null;
         }
 
-        private async Task<List<int>> AddSales(List<Order> orders, ComInfoModel comInfo)
-        {
-            FouledOrderIdList = new Dictionary<string, string>();
-            //DateTime dtnow = CommonHelper.GetCacheDateTimeNow();
-            DateTime dtnow = DateTime.Now;
-
-            var products = ModelHelper.GetWooProductFrmDb();
-            //products = await ModelHelper.GetWooProduct(rest);
-            int Roundings = 0;
-            List<string> zerostockItemcodes = new List<string>();
-            List<string> salesitemcodes = new List<string>();
-            //decimal totalpayamt = 0;
-            int apId = AccountProfileId;
-            int CusID = 0;
-            List<RtlPayLn> PayLnList = new List<RtlPayLn>();
-            DateTime paiddate = DateTime.MinValue;
-            List<int> abssMissingItemIdList = new List<int>();
-
-            using (var context = new WADbContext())
-            {
-                List<RtlSale> rtlSaleList = new List<RtlSale>();
-                List<RtlPay> rtlPayList = new List<RtlPay>();
-                List<RtlSalesLn> SalesLines = new List<RtlSalesLn>();
-                List<RtlPay> PayList = new List<RtlPay>();
-                Dictionary<string, int> dicItemQty = new Dictionary<string, int>();
-                List<PaymentType> PaymentTypes = new List<PaymentType>();
-
-                using (var transaction = context.Database.BeginTransaction())
-                {
-                    try
-                    {
-                        //bool isZeroStockInvoice = false;
-                        decimal totaltaxamt = 0;
-                        decimal totaldiscountamt = 0;
-                        decimal totalamount = 0;
-                        string wooorderstatus = "";
-
-                        foreach (var order in orders)
-                        {
-                            CusID = (int)order.customer_id;
-                            if (!ModelHelper.CheckCustomerId(CusID))
-                            {
-                                FouledOrderIdList[order.number] = string.Format("There is no such a customer with ID {0} in our database.", CusID);
-                            }
-                            else
-                            {
-                                wooorderstatus = order.status;
-                                if (wooorderstatus == "processing" || wooorderstatus == "completed")
-                                {
-                                    string salescode = ModelHelper.GetSalesCode(order.number.ToString());
-                                    //string paycode = order.payment_method;
-                                    bool inclusivetax = (bool)order.prices_include_tax;
-                                    string Notes = order.customer_note;
-                                    DateTime salesdate = order.date_created_gmt == null ? dtnow : CommonHelper.GetLocalDateTime(order.date_created_gmt);
-                                    paiddate = order.date_paid_gmt == null ? dtnow : CommonHelper.GetLocalDateTime(order.date_paid_gmt);
-                                    totalamount = (decimal)order.total;
-                                    decimal paidamt = 0;
-
-                                    decimal taxamt = 0;
-                                    //decimal taxamt = 0;
-                                    decimal discountamt = 0;
-                                    var taxcode = "";
-                                    var couponcode = "";
-                                    //bool taxable = false;
-                                    //decimal taxrate = 0;
-                                    //decimal incltaxamt = 0;
-                                    //decimal excltaxamt = 0;
-                                    ItemModel product = new ItemModel();
-                                    int itemId = 0;
-
-                                    foreach (var salesln in order.line_items)
-                                    {
-                                        product = products.Where(x => x.itmWooItemId == (int)salesln.product_id).FirstOrDefault();
-                                        if (product == null)
-                                        {
-                                            FouledOrderIdList[order.number] = string.Format("There is no such a product with Name {0} in our database.", salesln.name);
-                                            //totalamount -= (decimal)order.total;
-                                        }
-                                        else
-                                        {
-                                            itemId = product.itmWooItemId;
-                                            var wooitem = ModelHelper.GetWooItemById(itemId, context);
-                                            if (string.IsNullOrEmpty(wooitem.itmCode))
-                                            {
-                                                abssMissingItemIdList.Add(itemId);
-                                            }
-
-                                            decimal sellingprice = CommonHelper.RoundDecimal((decimal)salesln.price, 2);
-                                            //string itemcode = "";
-                                            //int itemId = 0;                                   
-                                            int qty = decimal.ToInt32((decimal)salesln.quantity);
-                                            paidamt += (decimal)salesln.total;
-
-                                            RtlSalesLn rtlSalesLn = new RtlSalesLn(); //MUST not use object initializer in the loop, otherwise will get error.
-                                            rtlSalesLn.rtlWooId = (int)salesln.id;
-                                            rtlSalesLn.rtlSalesLoc = comInfo.abssPrimaryLocation;
-                                            //rtlSalesLn.rtlDvc = device.dvcCode;
-                                            rtlSalesLn.rtlCode = salescode;
-                                            //rtlSalesLn.rtlSeq = salesln.seq;
-                                            rtlSalesLn.rtlItemCode = wooitem.itmCode;
-                                            rtlSalesLn.rtlWooItemId = itemId;
-                                            //rtlSalesLn.rtlHasSerialNo = salesln.itemsnlist != null; //salesln.itemsnlist.Count>0;=>error!
-                                            //rtlSalesLn.rtlTaxRate = taxrate;
-                                            rtlSalesLn.rtlLineDiscAmt = discountamt;
-                                            //rtlSalesLn.rtlLineDiscPc = salesln.discount;
-                                            rtlSalesLn.rtlWooCouponCode = couponcode;
-                                            rtlSalesLn.rtlQty = salesln.quantity;
-                                            rtlSalesLn.rtlTaxAmt = taxamt;
-                                            rtlSalesLn.rtlDate = salesdate;
-                                            //rtlSalesLn.rtlBatchCode = salesln.batchcode;
-                                            rtlSalesLn.rtlSalesAmt = (decimal)salesln.total;
-                                            rtlSalesLn.rtlType = "RS";
-                                            rtlSalesLn.rtlSellingPrice = sellingprice;
-                                            rtlSalesLn.rtlCheckout = false;
-                                            //rtlSalesLn.rtlDesc = salesln.itemdesc;
-                                            //rtlSalesLn.rtlRrpTaxIncl = incltaxamt;
-                                            //rtlSalesLn.rtlRrpTaxExcl = excltaxamt;
-                                            //rtlSalesLn.rtlSellingPriceMinusInclTax = sellingprice;
-                                            rtlSalesLn.rtlInclusiveTax = inclusivetax;
-                                            rtlSalesLn.rtlTaxCode = taxcode;
-                                            SalesLines.Add(rtlSalesLn);
-                                        }
-                                    }
-
-                                    if (product != null)
-                                    {
-                                        if ((bool)product.itmIsMyobTaxed)
-                                            totaltaxamt += (decimal)order.total_tax;
-                                        if (order.tax_lines.Count > 0)
-                                        {
-                                            taxcode = order.tax_lines[0].rate_code;
-                                        }
-
-                                        totaldiscountamt += (decimal)order.discount_total;
-                                        if (order.coupon_lines.Count > 0)
-                                        {
-                                            couponcode = order.coupon_lines[0].code;
-                                        }
-
-                                        totaltaxamt -= totaldiscountamt;
 
 
-                                        //totaltaxamt -= (decimal)order.discount_tax;
 
-
-                                        //string salesstatus = (isZeroStockInvoice) ? "PENDING" : "CREATED";
-                                        string salesstatus = order.status;
-                                        decimal linetotal = (inclusivetax) ? totalamount - totaltaxamt : totalamount;
-                                        decimal linetotalplustax = (inclusivetax) ? totalamount : totalamount + totaltaxamt;
-                                        decimal finaltotal = (inclusivetax) ? totalamount + Roundings : totalamount + totaltaxamt + Roundings;
-                                        var rtlSale = new RtlSale
-                                        {
-                                            rtsWooId = (int)order.id,
-                                            rtsSalesLoc = comInfo.abssPrimaryLocation,
-                                            rtsDvc = "",
-                                            rtsCode = salescode,
-                                            rtsType = "RS",
-                                            rtsStatus = salesstatus,
-                                            rtsCusID = CusID,
-                                            rtsLineTotal = linetotal,
-                                            rtsLineTotalPlusTax = linetotalplustax,
-                                            //rtsFinalDisc = totaldiscpc,
-                                            rtsFinalDiscAmt = order.discount_total,
-                                            //rtsFinalTotal = totalamount + totaltaxamt + Roundings - totaldiscountamt,
-                                            rtsFinalTotal = finaltotal,
-                                            rtsRmks = Notes,
-                                            rtsUpLdLog = order.created_via,
-                                            rtsDate = salesdate.Date,
-                                            rtsTime = salesdate,
-                                            rtsCreateTime = dtnow,
-                                            //rtsInternalRmks = InternalNotes,
-                                            rtsMonthBase = false,
-                                            rtsLineTaxAmt = totaltaxamt,
-                                            rtsEpay = false,
-                                            rtsCheckout = false
-                                        };
-                                        rtlSaleList.Add(rtlSale);
-                                        //string paytype = Deposit == 1 ? "DE" : "";
-                                        var rtlPay = new RtlPay
-                                        {
-                                            rtpSalesLoc = comInfo.abssPrimaryLocation.ToString(),
-                                            rtpWooPayMethod = order.payment_method,
-                                            //rtpDvc = device.dvcCode,
-                                            rtpCode = salescode,
-                                            //rtpSeq = session.sesDvcSeq,
-                                            //rtpPayAmt = totalamount + Roundings,=> fill in later
-                                            rtpPayAmt = paidamt,
-                                            rtpDate = paiddate.Date,
-                                            rtpTime = paiddate,
-                                            rtpTxType = "RS",
-                                            //rtpRoundings = Roundings,
-                                            //rtpChange = Change,
-                                            //rtpPayType = paytype,
-                                            //rtpEpayType = authcode == "" ? "" : ModelHelper.GetEpayType(authcode).ToString(),
-                                            rtpCurrency = order.currency
-                                        };
-                                        rtlPayList.Add(rtlPay);
-                                    }
-                                }
-                            }
-                        }
-
-                        if (rtlSaleList.Count > 0)
-                        {
-                            context.RtlSales.AddRange(rtlSaleList);
-                        }
-                        if (rtlPayList.Count > 0)
-                        {
-                            context.RtlPays.AddRange(rtlPayList);
-                        }
-                        if (SalesLines.Count > 0)
-                        {
-                            context.RtlSalesLns.AddRange(SalesLines);
-                        }
-
-                        await context.SaveChangesAsync();
-
-                        #region Handling CustomerPoints
-
-                        if (totalamount > 0)
-                        {
-                            var cuspoint = Convert.ToInt32(totalamount);
-
-                            var customerpointpricelevels = (
-                                from cp in context.CustomerPointPriceLevels
-                                join pl in context.PriceLevels
-                                on cp.PriceLevelID equals pl.PriceLevelID
-                                select new CustomerPointPriceLevelModel
-                                {
-                                    Id = cp.Id,
-                                    CustomerPoint = cp.CustomerPoint,
-                                    PriceLevelID = cp.PriceLevelID,
-                                    PriceLevelDescription = pl.Description
-                                }
-                                ).ToList();
-
-                            CustomerPointPriceLevelModel lastcp = customerpointpricelevels.OrderByDescending(x => x.Id).FirstOrDefault();
-
-                            var mcustomer = context.MyobCustomers.FirstOrDefault(x => x.cusCustomerID == CusID && x.AccountProfileId == AccountProfileId && x.cusIsActive == true);
-                            if (mcustomer != null)
-                            {
-                                mcustomer.cusPointsSoFar += cuspoint;
-                                mcustomer.cusPointsActive = mcustomer.cusPointsSoFar - mcustomer.cusPointsUsed;
-                                mcustomer.cusModifyTime = dtnow;
-                                //mcustomer.cusModifyBy = user.UserCode;
-
-                                if (mcustomer.cusPointsActive > lastcp.CustomerPoint)
-                                {
-                                    mcustomer.cusPriceLevelID = lastcp.PriceLevelID;
-                                }
-                                else
-                                {
-                                    int idx = 0;
-                                    foreach (var cp in customerpointpricelevels)
-                                    {
-                                        if (cp.CustomerPoint == mcustomer.cusPointsActive)
-                                        {
-                                            mcustomer.cusPriceLevelID = cp.PriceLevelID;
-                                            break;
-                                        }
-                                        if (cp.CustomerPoint > mcustomer.cusPointsActive)
-                                        {
-                                            if (customerpointpricelevels[idx - 1] != null)
-                                            {
-                                                mcustomer.cusPriceLevelID = customerpointpricelevels[idx - 1].PriceLevelID;
-                                                break;
-                                            }
-                                        }
-                                        idx++;
-                                    }
-                                }
-                            }
-                            await context.SaveChangesAsync();
-                        }
-
-                        #endregion
-                        transaction.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        transaction.Rollback();
-                        throw new Exception(ex.Message);
-                    }
-                }
-            }
-            return abssMissingItemIdList;
-        }
-
-
-        private ItemModel PopulateItem(Product i)
-        {
-            List<string> msg = new List<string>();
-            FouledProductNameList = new Dictionary<string, string>();
-            if ((!string.IsNullOrEmpty(i.sku) && i.sku.Length > MaxItemCodeLength) && (!string.IsNullOrEmpty(i.slug) && i.slug.Length > MaxItemCodeLength))
-            {
-                if (i.sku.Length > MaxItemCodeLength)
-                {
-                    msg.Add(string.Format("The length of Product sku exceeds {0}.", MaxItemCodeLength));
-                    FouledProductNameList[i.name] = String.Join(",", msg);
-                }
-                if (i.slug.Length > MaxItemCodeLength)
-                {
-                    msg.Add(string.Format("The length of Product slug exceeds {0}.", MaxItemCodeLength));
-                    FouledProductNameList[i.name] = String.Join(",", msg);
-                }
-                return null;
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(i.sku))
-                {
-                    if (!string.IsNullOrEmpty(i.slug) && i.slug.Length > MaxItemCodeLength)
-                    {
-                        msg.Add(string.Format("The length of Product slug exceeds {0}.", MaxItemCodeLength));
-                        FouledProductNameList[i.name] = String.Join(",", msg);
-                        return null;
-                    }
-                    else
-                    {
-                        return populateItem(i);
-                    }
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(i.sku) && i.sku.Length > MaxItemCodeLength)
-                    {
-                        msg.Add(string.Format("The length of Product sku exceeds {0}.", MaxItemCodeLength));
-                        FouledProductNameList[i.name] = String.Join(",", msg);
-                        return null;
-                    }
-                    else
-                    {
-                        return populateItem(i);
-                    }
-                }
-
-            }
-
-        }
-
-        private ItemModel populateItem(Product i)
-        {
-            string itemcode = i.sku ?? (i.slug ?? ModelHelper.GenItemCode());
-            DateTime dtnow = CommonHelper.GetCacheDateTimeNow();
-            string desc = Regex.Replace(i.description, @"\r\n?|\n", "");
-            desc = Regex.Replace(i.description, @"<.*?>", String.Empty);
-            return new ItemModel
-            {
-                itmCode = itemcode,
-                itmWooItemId = (int)i.id,
-                itmCreateTime = i.date_created_gmt ?? dtnow,
-                itmModifyTime = i.date_modified_gmt ?? dtnow,
-                itmDesc = desc,
-                itmName = "",
-                itmBaseSellingPrice = i.price == null ? 0 : (double)i.price,
-                itmBaseUnitPrice = i.regular_price == null ? 0 : (double)i.regular_price,
-                itmIsMyobTaxed = i.tax_status == "taxable",
-                itmTaxCode = i.tax_class,
-                itmIsNonStock = (i.stock_status.ToLower() == "outofstock" || i.stock_status.ToLower() == "onbackorder"),
-                lstQuantityAvailable = (i.manage_stock != null && i.manage_stock == true) ? i.stock_quantity ?? 0 : 0,
-                itmIsBought = i.purchasable ?? false,
-                itmIsSold = true,
-                lstStockLoc = comInfo.abssPrimaryLocation.ToString()
-            };
-        }
 
         private async Task<AbssResult> WriteItemToABSS()
         {
-            var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
+            var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId, false);
             if (CurrentWooItemList.Count == 0)
             {
                 MessageBox.Show("No Item Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -1111,49 +793,13 @@ namespace WooCommerceAddOn
             }
             else
             {
-                CheckOutIds = new List<int>();
                 using (var context = new WADbContext())
                 {
                     using (var transaction = context.Database.BeginTransaction())
                     {
                         try
                         {
-                            List<string> columns = new List<string>();
-                            string sql = MyobHelper.InsertImportItemNoNameSql;
-                            /*
-                             * "ItemNumber,Buy,Sell,Inventory,AssetAccount,IncomeAccount,ExpenseAccount,ItemPicture,CustomList1,CustomList2,CustomList3,CustomField1,CustomField2,CustomField3,PrimarySupplier,SupplierItemNumber,TaxWhenBought,BuyUnitMeasure,NumberItemsBuyUnit,ReorderQuantity,MinimumLevel,SellingPrice,SellUnitMeasure,TaxWhenSold,NumberItemsSellUnit,QuantityBreak1,PriceLevelAQtyBreak1,PriceLevelBQtyBreak1,PriceLevelCQtyBreak1,PriceLevelDQtyBreak1,PriceLevelEQtyBreak1,PriceLevelFQtyBreak1,InactiveItem,StandardCost,DefaultShipSellLocation,DefaultReceiveAutoBuildLocation"
-                             */
-                            for (int j = 0; j < MyobHelper.ImportItemNoNameColCount; j++)
-                            {
-                                columns.Add("'{" + j + "}'");
-                            }
-                            string strcolumn = string.Join(",", columns);
-
-                            List<string> values = new List<string>();
-                            foreach (var item in CurrentWooItemList)
-                            {
-                                string value = "";
-                                char buy = item.itmIsBought ? 'Y' : 'N';
-                                char sell = 'Y';
-                                char inventory = 'Y';
-                                string taxcode = item.itmTaxCode;
-                                string inactivetxt = "N";
-                                /*
-                             * public static string ImportItemNoNameCol { get { return "ItemNumber,Description,,UseDescriptionOnSale,Buy,Sell,Inventory,AssetAccount,IncomeAccount,ExpenseAccount,ItemPicture,CustomList1,CustomList2,CustomList3,CustomField1,CustomField2,CustomField3,PrimarySupplier,SupplierItemNumber,TaxWhenBought,BuyUnitMeasure,NumberItemsBuyUnit,ReorderQuantity,MinimumLevel,SellingPrice,SellUnitMeasure,TaxWhenSold,NumberItemsSellUnit,QuantityBreak1,PriceLevelAQtyBreak1,PriceLevelBQtyBreak1,PriceLevelCQtyBreak1,PriceLevelDQtyBreak1,PriceLevelEQtyBreak1,PriceLevelFQtyBreak1,InactiveItem,StandardCost,DefaultShipSellLocation,DefaultReceiveAutoBuildLocation"; } }
-                             */
-                                value = string.Format("(" + strcolumn + ")", item.itmCode, item.itmDesc, 'Y', buy, sell, inventory, 12400, 48000, 54500, "", "", "", "", "", "", "", "", item.itmSupCode, "", "", 1, 0, 0, item.itmBaseSellingPrice, "", taxcode, 1, 0, item.PLA, item.PLB, item.PLC, item.PLD, item.PLE, item.PLF, inactivetxt, 0, "", "");
-                                values.Add(value);
-                                CheckOutIds.Add(item.itmWooItemId);
-                            }
-                            sql += string.Join(",", values) + ")";
-                            ABSSModel abss = new ABSSModel(sql, comInfo.abssDriver, comInfo.abssUserId, comInfo.abssUserPass, comInfo.abssFileLocation, comInfo.abssFileName, comInfo.abssExeLocation, comInfo.abssExeName, comInfo.abssKeyLocation, comInfo.abssKeyName);
-                            //ModelHelper.GetAbssKeyInfo(ref abss);
-                            var result = MyobHelper.WriteMYOB(abss);
-
-                            ModelHelper.WriteLog(context, string.Format("sql:{0};Success:{1};retmsg:{2}", sql, result.Success, result.Message), "Upload Item to ABSS");
-
-                            await context.SaveChangesAsync();
-                            await HandleCheckOutIds(CheckOutIds, context, DataType.Product);
+                            var result = await ItemEditModel.WriteWooItemsToABSS(CurrentWooItemList, comInfo, context);
                             transaction.Commit();
                             return result;
                         }
@@ -1164,13 +810,15 @@ namespace WooCommerceAddOn
                         }
                     }
                 }
-            }
 
+            }
         }
+
+
 
         private async Task<AbssResult> WriteVipToABSS()
         {
-            var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);
+            var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId, false);
             if (CurrentWooCustomerList.Count == 0)
             {
                 MessageBox.Show("No Customer Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -1214,7 +862,7 @@ namespace WooCommerceAddOn
                             ModelHelper.WriteLog(context, string.Format("sql:{0};Success:{1};retmsg:{2}", sql, result.Success, result.Message), "Upload Customer to ABSS");
 
                             await context.SaveChangesAsync();
-                            await HandleCheckOutIds(CheckOutIds, context, DataType.Customer);
+                            await ModelHelper.HandleCheckOutIds(CheckOutIds, context, DataType.Customer);
                             transaction.Commit();
                             return result;
                         }
@@ -1231,36 +879,7 @@ namespace WooCommerceAddOn
 
 
 
-        private async Task HandleCheckOutIds(List<int> checkOutIds, WADbContext context, DataType type)
-        {
-            switch (type)
-            {
-                case DataType.Product:
-                    var items = context.WooItems.Where(x => checkOutIds.Contains(x.itmWooItemId) && x.AccountProfileId == AccountProfileId);
-                    foreach (var i in items)
-                    {
-                        i.itmCheckout = true;
-                    }
-                    break;
-                case DataType.Customer:
-                    var customers = context.WooCustomers.Where(x => checkOutIds.Contains(x.cusCustomerID) && x.AccountProfileId == AccountProfileId);
-                    foreach (var c in customers)
-                    {
-                        c.cusCheckout = true;
-                    }
-                    break;
-                default:
-                case DataType.Order:
-                    var sales = context.RtlSales.Where(x => checkOutIds.Contains(x.rtsUID));
-                    foreach (var sale in sales)
-                    {
-                        sale.rtsCheckout = true;
-                    }
-                    break;
-            }
 
-            await context.SaveChangesAsync();
-        }
 
         private async Task<bool> setOrderPending(List<SalesLnView> pendingorders)
         {
@@ -1390,17 +1009,6 @@ namespace WooCommerceAddOn
         }
 
 
-        private async void btnWooCommerce_Click(object sender, EventArgs e)
-        {
-            progressBar1.Visible = true;
-            progressBar1.Style = ProgressBarStyle.Marquee;
-            var bok = await MyobItemEditModel.UpdateWoo(rest);
-            if (bok)
-            {
-                progressBar1.Visible = false;
-                MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-                
-        }
+
     }
 }

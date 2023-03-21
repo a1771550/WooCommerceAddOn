@@ -39,7 +39,7 @@ namespace WooCommerceAddOn
         {
             if(!IsDeploy)
             {
-                txtUserName.Text = "kevinlau";
+                txtUserName.Text = ConfigurationManager.AppSettings["UserName"];
             }
         }       
     }
