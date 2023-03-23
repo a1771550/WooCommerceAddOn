@@ -487,7 +487,6 @@ namespace WooCommerceAddOn
                             }
                         }
                     }
-
                     break;
                 default:
                 case DataType.Order:
@@ -507,21 +506,36 @@ namespace WooCommerceAddOn
                             {
                                 progressBar1.Visible = true;
                                 progressBar1.Style = ProgressBarStyle.Marquee;
-                                result = await WriteSalesToABSS(frmSalesDate, frmSalesDate.IncludeUploaded);
-                                progressBar1.Visible = false;
-
-                                if (result != null)
+                                using(var context=new WADbContext())
                                 {
-                                    const string caption = "ABSS Upload";
-                                    if (result.Success)
+                                    using (var transaction = context.Database.BeginTransaction())
                                     {
-                                        MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                        try
+                                        {
+                                            result = await ModelHelper.WriteSalesToABSS(context, comInfo, frmSalesDate.IncludeUploaded, frmSalesDate.frmDate, frmSalesDate.toDate);
+                                            progressBar1.Visible = false;
+
+                                            if (result != null)
+                                            {
+                                                const string caption = "ABSS Upload";
+                                                if (result.Success)
+                                                {
+                                                    MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                                }
+                                                else
+                                                {
+                                                    MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                }
+                                            }
+                                            transaction.Commit();
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            transaction.Rollback();
+                                            throw new Exception(ex.Message);
+                                        }
                                     }
-                                    else
-                                    {
-                                        MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                    }
-                                }
+                                }                                
                             }
                         }
                     }
@@ -542,244 +556,7 @@ namespace WooCommerceAddOn
             }
         }
 
-        private async Task<AbssResult> WriteSalesToABSS(frmSalesDate frmSalesDate, bool includeUploaded)
-        {
-            string sql = MyobHelper.ItemLocListSql;
-            ABSSModel abss = new ABSSModel(sql, comInfo.abssDriver, comInfo.abssUserId, comInfo.abssUserPass, comInfo.abssFileLocation, comInfo.abssFileName, comInfo.abssExeLocation, comInfo.abssExeName);
-            abss.accountProfileId = AccountProfileId;
-            abss.Location = new LocationModel
-            {
-                LocationCode = comInfo.abssPrimaryLocation,
-            };
-            var abssstocklist = ItemEditModel.GetAbssStockList(abss);
-            var outofstocklist = abssstocklist.Where(x => x.QuantityOnHand <= 0).ToList();
-            //var stocklist = abssstocklist.Except(outofstocklist).ToList();
-            //List<WALib.Models.MYOB.MyobItemModel> abssitemlist = ItemEditModel.GetAbssItemList(abss);
-
-            abss.frmDate = frmSalesDate.frmDate;
-            abss.toDate = frmSalesDate.toDate;
-            var saleslnlist = SalesEditModel.GetWooSalesList(abss, includeUploaded);
-            List<PayView> paylist = SalesEditModel.GetWooPayList(saleslnlist);
-
-            if (saleslnlist.Count == 0)
-            {
-                MessageBox.Show("No Sales Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return null;
-            }
-
-            List<SalesLnView> pendingorders = new List<SalesLnView>();
-            foreach (var salesln in saleslnlist)
-            {
-                if (!string.IsNullOrEmpty(salesln.rtlItemCode))
-                {
-                    if (outofstocklist.Any(x => x.ItemCode == salesln.rtlItemCode))
-                    {
-                        pendingorders.Add(salesln);
-                    }
-                }
-                else
-                {
-                    ItemModel item = ItemEditModel.GetWooItemById((int)salesln.rtlWooItemId, AccountProfileId);
-                    if (item != null)
-                    {
-                        if (outofstocklist.Any(x => x.itmName.ToLower() == item.itmName.ToLower()))
-                        {
-                            pendingorders.Add(salesln);
-                        }
-                    }
-                }
-            }
-
-            if (pendingorders.Count > 0)
-            {
-                if (await setOrderPending(pendingorders))
-                {
-                    saleslnlist = SalesEditModel.GetWooSalesList(abss);
-                    return await writeSalesToABSS(saleslnlist, paylist, comInfo.abssDateFormat);
-                }
-            }
-            else
-            {
-                return await writeSalesToABSS(saleslnlist, paylist, comInfo.abssDateFormat);
-            }
-            return null;
-        }
-
-        private async Task<AbssResult> writeSalesToABSS(List<SalesLnView> saleslnlist, List<PayView> paylist, string dateformatcode)
-        {
-            AbssResult result = null;
-            CheckOutIds = new List<int>();
-            const string salesprefix = "SA";
-            string salesrefundcode = "";
-            //const string deposititempo = "Deposit#SA";
-            //const string depositdesc = "G3Customer Deposit";
-            //string refsalescode = "";
-            const string deliverystatus = "A";
-            //string description = "";
-            string sql = "";
-            int collength;
-            List<string> columns;
-            string strcolumn = "";
-
-            if (saleslnlist.Count > 0)
-            {
-                CheckOutIds.AddRange(saleslnlist.Select(x => x.rtsUID).Distinct().ToList());
-
-                var GroupedSalesLnList = saleslnlist.GroupBy(x => x.rtlCode);
-
-                Dictionary<string, PayView> dicPayList = new Dictionary<string, PayView>();
-
-                foreach (var group in GroupedSalesLnList)
-                {
-                    dicPayList.Add(group.Key, paylist.Where(x => x.rtpCode == group.Key).FirstOrDefault());
-                }
-
-                double salespaidamt = 0;
-                string paytypeamts = "";
-                string paytypes = "";
-                string invoicestatus = "";
-                string value = "";
-                double mthchrpc = 0;
-
-                using (var context = new WADbContext())
-                {
-                    using (var transaction = context.Database.BeginTransaction())
-                    {
-                        try
-                        {
-                            foreach (var group in GroupedSalesLnList)
-                            {
-                                if (group.Count() <= 1)
-                                {
-                                    List<string> values = new List<string>();
-                                    var item = group.FirstOrDefault();
-                                    item.dateformat = dateformatcode == "E" ? @"dd/MM/yyyy" : @"MM/dd/yyyy";
-                                    invoicestatus = !item.IsCheckout && item.InvoiceStatus.ToLower() == "processing" ? "O" : "I";
-                                    var payview = dicPayList[item.rtlCode];
-                                    paytypes = payview.rtpWooPayMethod;
-
-                                    salesrefundcode = item.rtlCode.Replace("SA", "");
-                                    salesrefundcode = string.Concat(salesprefix, salesrefundcode);
-
-                                    salespaidamt = item.InvoiceStatus == "processing" ? 0 : (double)dicPayList[item.rtlCode].rtpPayAmt;
-
-                                    if (item.Item.itmIsNonStock)
-                                    {
-                                        sql = "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)  VALUES(";
-                                        collength = 23;
-                                        columns = new List<string>();
-                                        for (int j = 0; j < collength; j++)
-                                        {
-                                            columns.Add("'{" + j + "}'");
-                                        }
-                                        strcolumn = string.Join(",", columns);
-
-                                        value = string.Format(strcolumn, item.CustomerName, salesrefundcode, item.SalesDateDisplay, item.Item.itmCode, item.dQty, item.dPrice, item.dLineDiscPc, item.dLineSalesAmt, invoicestatus, item.CustomerCode, salespaidamt, paytypes, 0, 0, 0, item.dLineDiscPc, mthchrpc, deliverystatus, item.rtlRefSales, item.rtlSalesLoc, paytypes, item.SalesPersonName, paytypeamts);
-                                    }
-                                    else
-                                    {
-                                        sql = "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,Location,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)  VALUES(";
-
-                                        collength = 24;
-                                        columns = new List<string>();
-                                        for (int j = 0; j < collength; j++)
-                                        {
-                                            columns.Add("'{" + j + "}'");
-                                        }
-                                        strcolumn = string.Join(",", columns);
-
-
-                                        value = string.Format(strcolumn, item.CustomerName, salesrefundcode, item.SalesDateDisplay, item.Item.itmCode, item.dQty, item.dPrice, item.dLineDiscPc, item.dLineSalesAmt, invoicestatus, item.rtlSalesLoc, item.CustomerCode, salespaidamt, paytypes, 0, 0, 0, item.dLineDiscPc, mthchrpc, deliverystatus, item.rtlRefSales, item.rtlSalesLoc, paytypes, item.SalesPersonName, paytypeamts);
-                                    }
-
-                                    values.Add(value);
-
-                                    sql += string.Join(",", values) + ")";
-                                    ABSSModel abss = new ABSSModel(sql, comInfo.abssDriver, comInfo.abssUserId, comInfo.abssUserPass, comInfo.abssFileLocation, comInfo.abssFileName, comInfo.abssExeLocation, comInfo.abssExeName, comInfo.abssKeyLocation, comInfo.abssKeyName);
-                                    //ModelHelper.GetAbssKeyInfo(ref abss);
-                                    result = MyobHelper.WriteMYOB(abss);
-
-                                    ModelHelper.WriteLog(context, string.Format("sql:{0};Success:{1};retmsg:{2}", sql, result.Success, result.Message), "Upload Sales to ABSS");
-
-                                    await context.SaveChangesAsync();
-
-                                }
-                                else
-                                {
-                                    List<string> values = new List<string>();
-                                    foreach (var item in group)
-                                    {
-                                        salespaidamt = item.InvoiceStatus == "processing" ? 0 : (double)dicPayList[item.rtlCode].rtpPayAmt;
-                                        invoicestatus = !item.IsCheckout && item.InvoiceStatus.ToLower() == "processing" ? "O" : "I";
-                                        var payview = dicPayList[item.rtlCode];
-                                        paytypes = payview.rtpWooPayMethod;
-                                        /*
-                                     * "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,Location,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)
-                                     */
-                                        salesrefundcode = item.rtlCode.Replace("SA", "");
-                                        salesrefundcode = string.Concat(salesprefix, salesrefundcode);
-
-                                        if (item.Item.itmIsNonStock)
-                                        {
-                                            sql = "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)  VALUES(";
-                                            collength = 23;
-                                            columns = new List<string>();
-                                            for (int j = 0; j < collength; j++)
-                                            {
-                                                columns.Add("'{" + j + "}'");
-                                            }
-                                            strcolumn = string.Join(",", columns);
-
-                                            value = string.Format("(" + strcolumn + ")", item.CustomerName, salesrefundcode, item.SalesDateDisplay, item.Item.itmCode, item.dQty, item.dPrice, item.dLineDiscPc, item.dLineSalesAmt, invoicestatus, item.CustomerCode, salespaidamt, paytypes, 0, 0, 0, item.dLineDiscPc, mthchrpc, deliverystatus, item.rtlRefSales, item.rtlSalesLoc, paytypes, item.SalesPersonName, paytypeamts);
-                                        }
-                                        else
-                                        {
-                                            sql = "INSERT INTO Import_Item_Sales(CoLastName,InvoiceNumber,SaleDate,ItemNumber,Quantity,Price,Discount,Total,SaleStatus,Location,CardID,AmountPaid,PaymentMethod,PaymentIsDue,DiscountDays,BalanceDueDays,PercentDiscount,PercentMonthlyCharge,DeliveryStatus,CustomersNumber,Job,Comment,SalespersonLastName,Memo)  VALUES(";
-
-                                            collength = 24;
-                                            columns = new List<string>();
-                                            for (int j = 0; j < collength; j++)
-                                            {
-                                                columns.Add("'{" + j + "}'");
-                                            }
-                                            strcolumn = string.Join(",", columns);
-
-                                            value = string.Format("(" + strcolumn + ")", item.CustomerName, salesrefundcode, item.SalesDateDisplay, item.Item.itmCode, item.dQty, item.dPrice, item.dLineDiscPc, item.dLineSalesAmt, invoicestatus, item.rtlSalesLoc, item.CustomerCode, salespaidamt, paytypes, 0, 0, 0, item.dLineDiscPc, mthchrpc, deliverystatus, item.rtlRefSales, item.rtlSalesLoc, paytypes, item.SalesPersonName, paytypeamts);
-                                        }
-
-                                        values.Add(value);
-                                    }
-                                    sql += string.Join(",", values) + ")";
-                                    ABSSModel abss = new ABSSModel(sql, comInfo.abssDriver, comInfo.abssUserId, comInfo.abssUserPass, comInfo.abssFileLocation, comInfo.abssFileName, comInfo.abssExeLocation, comInfo.abssExeName, comInfo.abssKeyLocation, comInfo.abssKeyName);
-                                    //ModelHelper.GetAbssKeyInfo(ref abss);
-                                    result = MyobHelper.WriteMYOB(abss);
-
-                                    ModelHelper.WriteLog(context, string.Format("sql:{0};Success:{1};retmsg:{2}", sql, result.Success, result.Message), "Upload Sales to ABSS");
-
-                                    await context.SaveChangesAsync();
-
-
-                                }
-                            }
-
-                            await ModelHelper.HandleCheckOutIds(CheckOutIds, context, DataType.Order);
-                            transaction.Commit();
-                            return result;
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw new Exception(ex.Message);
-                        }
-                    }
-
-                }
-            }
-
-            return null;
-        }
-
-
+       
 
 
 
@@ -875,34 +652,6 @@ namespace WooCommerceAddOn
                 }
             }
         }
-
-
-
-
-
-
-        private async Task<bool> setOrderPending(List<SalesLnView> pendingorders)
-        {
-            bool done = false;
-            using (var context = new WADbContext())
-            {
-                foreach (var order in pendingorders)
-                {
-                    var sales = context.RtlSales.Where(x => x.rtsWooId == order.rtlWooId).FirstOrDefault();
-                    if (sales != null)
-                    {
-                        sales.rtsStatus = "PENDING";
-                    }
-                }
-
-                if (await context.SaveChangesAsync() > 0)
-                {
-                    done = true;
-                }
-            }
-            return done;
-        }
-
 
         private BindingSource GetCurrentRecordsABSS()
         {
@@ -1007,8 +756,5 @@ namespace WooCommerceAddOn
         {
             Close();
         }
-
-
-
     }
 }
