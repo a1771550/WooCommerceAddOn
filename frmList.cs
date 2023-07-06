@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Data;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,14 +15,11 @@ using WooCommerceNET;
 using WADAL;
 using CommonLib.Helpers;
 using ModelHelper = WALib.Helpers.ModelHelper;
-using CommonLib.Models;
 using MYOBLib.Models;
-using System.Drawing.Printing;
-using System.Text.RegularExpressions;
 using CommonLib.Models.MYOB;
 using WALib.Models.MYOB;
 using WaitWnd;
-using System.Runtime.Remoting.Contexts;
+using MyobCustomerModel = WALib.Models.MYOB.MyobCustomerModel;
 
 namespace WooCommerceAddOn
 {
@@ -87,6 +83,10 @@ namespace WooCommerceAddOn
 
             switch (type)
             {
+                case DataType.AbssCustomer:
+                    AbssCustomers = new List<MyobCustomerModel>();
+                    this.Text = "ABSS Customer List";
+                    break;
                 case DataType.AbssProduct:
                     AbssProducts = new List<MyobItemModel>();
                     this.Text = "ABSS Product List";
@@ -116,6 +116,17 @@ namespace WooCommerceAddOn
 
             switch (type)
             {
+                case DataType.AbssCustomer:
+                    //todo:
+                    AbssCustomers = MYOBHelper.GetCustomerList(abss);
+                    progressBar1.Visible = false;
+                    totalpages = AbssCustomers.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
+                    var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
+                    source = new BindingSource(bindingList_abssC, null);
+                    iTotal.Text = AbssCustomers.Count.ToString();
+                    break;
                 case DataType.AbssProduct:
                     AbssProducts = MYOBHelper.GetItemList(abss);
                     progressBar1.Visible = false;
@@ -194,15 +205,30 @@ namespace WooCommerceAddOn
 
         private async void btnSaveDB_Click(object sender, EventArgs e)
         {
+            bool bok = false;
             switch (type)
             {
+                case DataType.AbssCustomer:
+                    #region remove current data first:
+                    MyobCustomerEditModel.RemoveAll();
+                    #endregion
+
+                    #region add data:
+                    bok = await MyobCustomerEditModel.AddList(AbssCustomers, comInfo.AccountProfileId);
+                    if (bok)
+                    {
+                        progressBar1.Visible = false;
+                        MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    #endregion
+                    break;
                 case DataType.AbssProduct:
                     #region remove current data first:
                     MyobItemEditModel.RemoveAll();
                     #endregion
 
                     #region add data:
-                    bool bok = await MyobItemEditModel.AddList(AbssProducts, comInfo.AccountProfileId);
+                    bok = await MyobItemEditModel.AddList(AbssProducts, comInfo.AccountProfileId);
                     if (bok)
                     {
                         progressBar1.Visible = false;
@@ -547,17 +573,24 @@ namespace WooCommerceAddOn
             waitForm.Show(this);
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
-            var bok = await MyobItemEditModel.UpdateWoo(rest, comInfo);
-            waitForm.Close();
-            if (bok)
+            bool bok = false;
+            switch (type)
             {
-                progressBar1.Visible = false;
-                MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+                case DataType.AbssCustomer:
+
+                    break;
+                default:
+                case DataType.AbssProduct:
+                    bok = await MyobItemEditModel.UpdateWoo(rest, comInfo);
+                    waitForm.Close();
+                    if (bok)
+                    {
+                        progressBar1.Visible = false;
+                        MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    break;
+            }             
         }
-
-       
-
 
 
         private async Task<AbssResult> WriteItemToABSS()

@@ -91,10 +91,6 @@
     <Reference Include="Azure.Identity, Version=1.8.2.0, Culture=neutral, PublicKeyToken=92742159e12e44c8, processorArchitecture=MSIL">
       <HintPath>..\packages\Azure.Identity.1.8.2\lib\netstandard2.0\Azure.Identity.dll</HintPath>
     </Reference>
-    <Reference Include="CommonLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\CommonLib\bin\Release\CommonLib.dll</HintPath>
-    </Reference>
     <Reference Include="Dapper, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Dapper.2.0.123\lib\net461\Dapper.dll</HintPath>
     </Reference>
@@ -378,6 +374,10 @@
     <ProjectReference Include="..\..\MYOBLib\MYOBLib.csproj">
       <Project>{FCC0CA95-39BA-49E4-99E9-8186F9A90D2E}</Project>
       <Name>MYOBLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CommonLib\CommonLib.csproj">
+      <Project>{7125bade-3ff9-4d3f-a8bb-65d6ccf9e5a8}</Project>
+      <Name>CommonLib</Name>
     </ProjectReference>
     <ProjectReference Include="..\WACommonLib\WACommonLib.csproj">
       <Project>{6ad3646b-44d1-410e-9164-3c5a823601a4}</Project>

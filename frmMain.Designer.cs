@@ -43,6 +43,7 @@
             this.panel4 = new System.Windows.Forms.Panel();
             this.btnSaveCat = new System.Windows.Forms.Button();
             this.btnUpdateCat = new System.Windows.Forms.Button();
+            this.btnGetAbssCustomer = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.panel4.SuspendLayout();
@@ -136,6 +137,7 @@
             // 
             this.panel2.BackColor = System.Drawing.Color.Lavender;
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel2.Controls.Add(this.btnGetAbssCustomer);
             this.panel2.Controls.Add(this.btnGetAbssProduct);
             this.panel2.Location = new System.Drawing.Point(12, 177);
             this.panel2.Name = "panel2";
@@ -146,7 +148,7 @@
             // 
             this.btnGetAbssProduct.BackColor = System.Drawing.Color.SpringGreen;
             this.btnGetAbssProduct.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.btnGetAbssProduct.Location = new System.Drawing.Point(16, 49);
+            this.btnGetAbssProduct.Location = new System.Drawing.Point(15, 22);
             this.btnGetAbssProduct.Name = "btnGetAbssProduct";
             this.btnGetAbssProduct.Size = new System.Drawing.Size(181, 23);
             this.btnGetAbssProduct.TabIndex = 2;
@@ -210,6 +212,18 @@
             this.btnUpdateCat.UseVisualStyleBackColor = false;
             this.btnUpdateCat.Click += new System.EventHandler(this.btnUpdateCat_Click);
             // 
+            // btnGetAbssCustomer
+            // 
+            this.btnGetAbssCustomer.BackColor = System.Drawing.Color.SpringGreen;
+            this.btnGetAbssCustomer.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.btnGetAbssCustomer.Location = new System.Drawing.Point(15, 76);
+            this.btnGetAbssCustomer.Name = "btnGetAbssCustomer";
+            this.btnGetAbssCustomer.Size = new System.Drawing.Size(181, 23);
+            this.btnGetAbssCustomer.TabIndex = 3;
+            this.btnGetAbssCustomer.Text = "Retrieve ABSS Customer";
+            this.btnGetAbssCustomer.UseVisualStyleBackColor = false;
+            this.btnGetAbssCustomer.Click += new System.EventHandler(this.btnGetAbssCustomer_Click);
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -250,6 +264,7 @@
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.Button btnSaveCat;
         private System.Windows.Forms.Button btnUpdateCat;
+        private System.Windows.Forms.Button btnGetAbssCustomer;
     }
 }
 
