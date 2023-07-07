@@ -16,10 +16,10 @@ using WADAL;
 using CommonLib.Helpers;
 using ModelHelper = WALib.Helpers.ModelHelper;
 using MYOBLib.Models;
-using CommonLib.Models.MYOB;
 using WALib.Models.MYOB;
 using WaitWnd;
 using MyobCustomerModel = WALib.Models.MYOB.MyobCustomerModel;
+using System.IO;
 
 namespace WooCommerceAddOn
 {
@@ -57,28 +57,29 @@ namespace WooCommerceAddOn
             InitializeComponent();
             this.comInfo = comInfo;
             type = comInfo.dataType;
-            abss = new ABSSModel();
+            abss = new ABSSModel
+            {
+                Driver = comInfo.abssDriver,
+                FileLocation = comInfo.abssFileLocation,
+                FileName = comInfo.abssFileName,
+                UserId = comInfo.abssUserId,
+                UserPass = comInfo.abssUserPass,
+                AppExeLocation = comInfo.abssExeLocation,
+                AppExeName = comInfo.abssExeName,
+                KeyLocation = comInfo.abssKeyLocation,
+                KeyName = comInfo.abssKeyName
+            };
+
             var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
             rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
 
             if (type.ToString().StartsWith("Abss"))
             {
                 btnABSS.Enabled = false;
-                abss.Driver = comInfo.abssDriver;
-                abss.FileLocation = comInfo.abssFileLocation;
-                abss.FileName = comInfo.abssFileName;
-                abss.UserId = comInfo.abssUserId;
-                abss.UserPass = comInfo.abssUserPass;
-                abss.AppExeLocation = comInfo.abssExeLocation;
-                abss.AppExeName = comInfo.abssExeName;
-                abss.KeyLocation = comInfo.abssKeyLocation;
-                abss.KeyName = comInfo.abssKeyName;
-                //lblTotal.Visible = true;
             }
             else
             {
                 btnWooCommerce.Enabled = false;
-                //lblTotal.Visible = false;
             }
 
             switch (type)
@@ -116,8 +117,7 @@ namespace WooCommerceAddOn
 
             switch (type)
             {
-                case DataType.AbssCustomer:
-                    //todo:
+                case DataType.AbssCustomer:                    
                     AbssCustomers = MYOBHelper.GetCustomerList(abss);
                     progressBar1.Visible = false;
                     totalpages = AbssCustomers.Count / PageSize;
@@ -199,7 +199,18 @@ namespace WooCommerceAddOn
             this.dgList.ReadOnly = true;
             if (type == DataType.AbssCustomer)
             {
-                dgList.Columns[0].Visible = false;
+                //dgList.Columns[0].Visible = false;               
+                dgList.Columns["CustomerID"].DisplayIndex = 0;
+                dgList.Columns["CardIdentification"].DisplayIndex = 1;
+                dgList.Columns["Name"].DisplayIndex = 2;
+                dgList.Columns["FirstName"].DisplayIndex = 3;
+                dgList.Columns["Notes"].DisplayIndex = 4;
+                dgList.Columns["CustomField1"].DisplayIndex = 5;
+                dgList.Columns["CustomField2"].DisplayIndex = 6;
+                dgList.Columns["CustomField3"].DisplayIndex = 7;
+                dgList.Columns["CurrentBalance"].DisplayIndex = 8;
+                dgList.Columns["TotalDeposits"].DisplayIndex = 9;
+                dgList.Columns["CreditLimit"].DisplayIndex = 10;
             }
         }
 
@@ -210,7 +221,9 @@ namespace WooCommerceAddOn
             {
                 case DataType.AbssCustomer:
                     #region remove current data first:
-                    MyobCustomerEditModel.RemoveAll();
+                    //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
+                    //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
+                    MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
                     #endregion
 
                     #region add data:
@@ -224,7 +237,9 @@ namespace WooCommerceAddOn
                     break;
                 case DataType.AbssProduct:
                     #region remove current data first:
-                    MyobItemEditModel.RemoveAll();
+                    //var itemIds = AbssProducts.Select(x=>x.ItemID).Distinct().ToHashSet();
+                    //MyobItemEditModel.RemoveByItemIds(comInfo.AccountProfileId, itemIds);
+                    MyobItemEditModel.RemoveAll(comInfo.AccountProfileId);
                     #endregion
 
                     #region add data:
@@ -464,7 +479,7 @@ namespace WooCommerceAddOn
             AbssResult result;
             switch (type)
             {
-                case DataType.Product:
+                case DataType.Product:  
                     if (ItemEditModel.GetWooItemCount(AccountProfileId) == 0)
                     {
                         progressBar1.Visible = false;
@@ -497,7 +512,7 @@ namespace WooCommerceAddOn
                     }
                     else
                     {
-                        result = await WriteVipToABSS();
+                        result = await WriteCustomerToABSS();
                         progressBar1.Visible = false;
 
                         if (result != null)
@@ -516,7 +531,17 @@ namespace WooCommerceAddOn
                     break;
                 default:
                 case DataType.Order:
-                    if (MessageBox.Show("Please make sure that your ABSS application is closed before trying to upload data to the ABSS.", "ABSS", MessageBoxButtons.OK, MessageBoxIcon.Warning) == DialogResult.OK)
+                    bool islocked = false;
+                    FileInfo fileInfo = new FileInfo(Path.Combine(comInfo.abssFileLocation,comInfo.abssFileName));
+                    if (fileInfo.Exists)
+                    {
+                        islocked = FileHelper.IsFileLocked(fileInfo);
+                    }
+                    if(islocked)
+                    {
+                        MessageBox.Show("The ABSS file is being locked. Please make sure the file is unlocked before trying to do data transference.", "ABSS", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
                     {
                         if (SalesEditModel.GetWooSalesCount() == 0)
                         {
@@ -532,7 +557,7 @@ namespace WooCommerceAddOn
                             {
                                 progressBar1.Visible = true;
                                 progressBar1.Style = ProgressBarStyle.Marquee;
-                                using(var context=new WADbContext())
+                                using (var context = new WADbContext())
                                 {
                                     using (var transaction = context.Database.BeginTransaction())
                                     {
@@ -561,10 +586,11 @@ namespace WooCommerceAddOn
                                             throw new Exception(ex.Message);
                                         }
                                     }
-                                }                                
+                                }
                             }
                         }
                     }
+                    
                     break;
             }
         }
@@ -577,7 +603,13 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.AbssCustomer:
-
+                    bok = await MyobCustomerEditModel.UpdateWoo(rest);
+                    waitForm.Close();
+                    if (bok)
+                    {
+                        progressBar1.Visible = false;
+                        MessageBox.Show("Customers Uploaded to WooCommerce", "Upload Customers", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                     break;
                 default:
                 case DataType.AbssProduct:
@@ -596,20 +628,30 @@ namespace WooCommerceAddOn
         private async Task<AbssResult> WriteItemToABSS()
         {
             var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId, false);
+
             if (CurrentWooItemList.Count == 0)
             {
-                MessageBox.Show("No Item Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("No Woo Product Data Found! Please save WooCommerce product data to DB first.", "No Woo Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return null;
             }
             else
             {
+                var CurrentItemCodes = MYOBHelper.GetItemCodes(abss);
+                List<ItemModel> FilteredWooItemList = CurrentWooItemList.Where(x => !CurrentItemCodes.Contains(x.itmCode)).ToList();
+                if(FilteredWooItemList.Count == 0)
+                {
+                    MessageBox.Show("No New Item Data Found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    return null;
+                }                
+
                 using (var context = new WADbContext())
                 {
                     using (var transaction = context.Database.BeginTransaction())
                     {
                         try
                         {
-                            var result = await ItemEditModel.WriteWooItemsToABSS(CurrentWooItemList, comInfo, context);
+                            //CheckOutIds = new List<int>();
+                            var result = await ItemEditModel.WriteWooItemsToABSS(FilteredWooItemList, comInfo, context);
                             transaction.Commit();
                             return result;
                         }
@@ -626,7 +668,7 @@ namespace WooCommerceAddOn
 
 
 
-        private async Task<AbssResult> WriteVipToABSS()
+        private async Task<AbssResult> WriteCustomerToABSS()
         {
             var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId, false);
             if (CurrentWooCustomerList.Count == 0)
@@ -636,6 +678,14 @@ namespace WooCommerceAddOn
             }
             else
             {
+                var CurrentCustomerCodes = MYOBHelper.GetCustomerCodes(abss);
+                List<CustomerModel> FilteredWooCustomerList = CurrentWooCustomerList.Where(x => !CurrentCustomerCodes.Contains(x.cusCode)).ToList();
+                if (FilteredWooCustomerList.Count == 0)
+                {
+                    MessageBox.Show("No New Customer Data Found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    return null;
+                }
+
                 CheckOutIds = new List<int>();
                 using (var context = new WADbContext())
                 {
@@ -645,7 +695,7 @@ namespace WooCommerceAddOn
                         {
                             List<string> columns = new List<string>();
 
-                            //"INSERT INTO Import_Customer_Cards (CoLastName,CardID,CardStatus,ItemPriceLevel,InvoiceDelivery,Address1Phone1,CustomField3,Address1Email,Address1ContactName) VALUES("
+                            //CoLastName,CardID,InvoiceDelivery,Address1Phone1,Address1Email,Address1ContactName
                             string sql = MyobHelper.InsertImportCustomerWContactSql;
 
                             for (int j = 0; j < MyobHelper.ImportCustomerWContactColCount; j++)
@@ -658,8 +708,8 @@ namespace WooCommerceAddOn
                             foreach (var item in CurrentWooCustomerList)
                             {
                                 string deliverystatus = "A";
-                                string cardstatus = item.cusIsActive ? "N" : "Y";
-                                string value = string.Format("(" + strcolumn + ")", item.cusName, item.cusPhone, cardstatus, item.iPriceLevel, deliverystatus, item.cusPhone, item.cusPointsActive, item.cusEmail, item.cusContact);
+                                //string cardstatus = item.cusIsActive ? "N" : "Y";
+                                string value = string.Format("(" + strcolumn + ")", item.cusName, item.cusCode, deliverystatus, item.cusPhone, item.cusEmail, item.cusContact);
                                 values.Add(value);
                                 CheckOutIds.Add(item.cusCustomerID);
                             }
