@@ -85,10 +85,14 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.AbssCustomer:
-                    AbssCustomers = new List<MyobCustomerModel>();
+                    AbssCustomers = new List<MyobCustomerModel>();                    
+                    //url = string.Format("{0}/wp-json/wc/v3/customers/batch", comInfo.wcURL);
+                    //rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
                     this.Text = "ABSS Customer List";
                     break;
                 case DataType.AbssProduct:
+                    //url = string.Format("{0}/wp-json/wc/v3/products/batch", comInfo.wcURL);
+                    //rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
                     AbssProducts = new List<MyobItemModel>();
                     this.Text = "ABSS Product List";
                     break;
@@ -114,28 +118,56 @@ namespace WooCommerceAddOn
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
             decimal totalpages = 0;
-
+            btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] == "1";
             switch (type)
             {
-                case DataType.AbssCustomer:                    
-                    AbssCustomers = MYOBHelper.GetCustomerList(abss);
+                case DataType.AbssCustomer:
+                    HashSet<int> CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
+                    AbssCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",",CurrentCardRecordIds));
                     progressBar1.Visible = false;
-                    totalpages = AbssCustomers.Count / PageSize;
-                    TotalPage = (int)Math.Ceiling(totalpages);
-                    var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
-                    source = new BindingSource(bindingList_abssC, null);
-                    iTotal.Text = AbssCustomers.Count.ToString();
+                    if (AbssCustomers.Count == 0)
+                    {
+                        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Close();
+                        //AbssCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId);
+                        //btnWooCommerce.Enabled = false;
+                        //frmMain frmMain = new frmMain(false);
+                        //frmMain.ShowDialog();
+                    }
+                    else
+                    {
+                        totalpages = AbssCustomers.Count / PageSize;
+                        TotalPage = (int)Math.Ceiling(totalpages);
+                        var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
+                        source = new BindingSource(bindingList_abssC, null);
+                        iTotal.Text = AbssCustomers.Count.ToString();
+                    }
+                    
                     break;
                 case DataType.AbssProduct:
-                    AbssProducts = MYOBHelper.GetItemList(abss);
+                    HashSet<int> CurrentItemIds = MyobItemEditModel.GetCurrentItemIds(comInfo.AccountProfileId);                    
+                    AbssProducts = MYOBHelper.GetItemList(abss, string.Join(",",CurrentItemIds));
                     progressBar1.Visible = false;
-                    totalpages = AbssProducts.Count / PageSize;
-                    TotalPage = (int)Math.Ceiling(totalpages);
-                    var mproducts = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
-                    source = new BindingSource(bindingList_abssP, null);
-                    iTotal.Text = AbssProducts.Count.ToString();
+                    if (AbssProducts.Count == 0)
+                    {
+                        MessageBox.Show("All Items in ABSS are already uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Close();
+                        //AbssProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId);
+                        //btnWooCommerce.Enabled = false;
+                        //frmMain frmMain = new frmMain(false);
+                        //frmMain.ShowDialog();
+                    }
+                    else
+                    {
+                        totalpages = AbssProducts.Count / PageSize;
+                        TotalPage = (int)Math.Ceiling(totalpages);
+                        var mproducts = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
+                        source = new BindingSource(bindingList_abssP, null);
+                        iTotal.Text = AbssProducts.Count.ToString();
+                    }
+                    
                     break;
 
                 case DataType.Product:
@@ -599,7 +631,7 @@ namespace WooCommerceAddOn
             waitForm.Show(this);
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
-            bool bok = false;
+            bool bok;
             switch (type)
             {
                 case DataType.AbssCustomer:

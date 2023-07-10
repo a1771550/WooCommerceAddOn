@@ -27,114 +27,120 @@ namespace WooCommerceAddOn
         //private int TotalPage = 0;
         public int ExpectedTotal = 0;
         public int ActualTotal = 0;
-        public frmMain()
+        public bool doLogin = true;
+        public frmMain(bool doLogin)
         {
             InitializeComponent();
+            this.doLogin = doLogin;
         }
 
         private async void frmMain_Load(object sender, EventArgs e)
         {           
-            frmLogin frmlogin = new frmLogin();
-            frmlogin.ShowDialog();
-            if (frmlogin.dialogResult == DialogResult.OK)
+            if(doLogin)
             {
-                UserName = frmlogin.UserName;
-                comInfo = ComInfoEditModel.GetByName(UserName);
-                var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
-                rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+                frmLogin frmlogin = new frmLogin();
+                frmlogin.ShowDialog();
+                if (frmlogin.dialogResult == DialogResult.OK)
+                {
+                    UserName = frmlogin.UserName;
+                    comInfo = ComInfoEditModel.GetByName(UserName);
+                    var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
+                    rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
 
-                if (comInfo == null)
-                {
-                    var result = MessageBox.Show("No User Information Found!", "Login", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                    if (result == DialogResult.OK)
+                    if (comInfo == null)
                     {
-                        Application.Exit();
-                    }
-                }
-                else
-                {
-                    if (comInfo.first_run)
-                    {
-                        frmReadMe frmReadMe = new frmReadMe();
-                        frmReadMe.ShowDialog();
+                        var result = MessageBox.Show("No User Information Found!", "Login", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                        if (result == DialogResult.OK)
+                        {
+                            Application.Exit();
+                        }
                     }
                     else
                     {
-                        if (!comInfo.waLicenseActivated)
+                        if (comInfo.first_run)
                         {
-                            frmDevice frmDevice = new frmDevice();
-                            frmDevice.ShowDialog();
-                            if (frmDevice.dialogResult == DialogResult.OK)
-                            {
-                                DeviceId = frmDevice.DeviceID;
-                                comInfo = ComInfoEditModel.GetByDevice(DeviceId);
-
-                                if (comInfo == null)
-                                {
-                                    var result = MessageBox.Show("No Device Information Found!", "Device", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                                    if (result == DialogResult.OK)
-                                    {
-                                        Application.Exit();
-                                    }
-                                }
-                                else
-                                {
-                                    frmActivation frmActivation = new frmActivation(comInfo);
-                                    var result = frmActivation.ShowDialog();
-                                    if (result == DialogResult.OK)
-                                    {
-                                        ActivationOK();
-                                    }
-                                    else
-                                    {
-                                        Application.Exit();
-                                    }
-                                }
-
-                            }
-                        }
-                        else if (comInfo.waLicenseDateEnd <= CommonLib.Helpers.CommonHelper.GetDateTime())
-                        {
-                            var result = MessageBox.Show("Your License is end. Please contact us if you want to extend your license.", "License", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            if (result == DialogResult.OK)
-                            {
-                                Application.Exit();
-                            }
+                            frmReadMe frmReadMe = new frmReadMe();
+                            frmReadMe.ShowDialog();
                         }
                         else
                         {
-                            //for (int i = 0; i < 24; i++)
-                            //{
-                            //    var _i = i < 10 ? i.ToString("D2") : i.ToString();
-                            //    var _item0 = string.Concat(_i, ":00");
-                            //    var _item1 = string.Concat(_i, ":30");
-                            //    comIntervalTimes.Items.Add(_item0);
-                            //    comIntervalTimes.Items.Add(_item1);
-                            //}
-
-                            //if(comInfo.schedule_times!=null)
-                            //    comIntervalTimes.SelectedIndex = comIntervalTimes.FindStringExact(comInfo.schedule_times);
-                            //if (comInfo.schedule_days != null)
-                            //{
-                            //    comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
-                            //}
-                            List<ProductCategory> catlist = await ItemEditModel.GetProductCategories(rest, PageBatchSize);
-                            foreach(var cat in catlist)
+                            if (!comInfo.waLicenseActivated)
                             {
-                                ComboBoxItem item = new ComboBoxItem
+                                frmDevice frmDevice = new frmDevice();
+                                frmDevice.ShowDialog();
+                                if (frmDevice.dialogResult == DialogResult.OK)
                                 {
-                                    Value=cat.id,
-                                    Text=cat.name
-                                };
-                                comProdCat.Items.Add(item);
+                                    DeviceId = frmDevice.DeviceID;
+                                    comInfo = ComInfoEditModel.GetByDevice(DeviceId);
+
+                                    if (comInfo == null)
+                                    {
+                                        var result = MessageBox.Show("No Device Information Found!", "Device", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                                        if (result == DialogResult.OK)
+                                        {
+                                            Application.Exit();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        frmActivation frmActivation = new frmActivation(comInfo);
+                                        var result = frmActivation.ShowDialog();
+                                        if (result == DialogResult.OK)
+                                        {
+                                            ActivationOK();
+                                        }
+                                        else
+                                        {
+                                            Application.Exit();
+                                        }
+                                    }
+
+                                }
                             }
-                            if (comInfo.waDefaultProductCategory != null)
-                                comProdCat.SelectedIndex = comProdCat.Items.Cast<ComboBoxItem>().ToList().FindIndex(a => a.Value.ToString() == comInfo.waDefaultProductCategory.ToString());
-                            else comProdCat.SelectedIndex = 1;
+                            else if (comInfo.waLicenseDateEnd <= CommonLib.Helpers.CommonHelper.GetDateTime())
+                            {
+                                var result = MessageBox.Show("Your License is end. Please contact us if you want to extend your license.", "License", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                if (result == DialogResult.OK)
+                                {
+                                    Application.Exit();
+                                }
+                            }
+                            else
+                            {
+                                //for (int i = 0; i < 24; i++)
+                                //{
+                                //    var _i = i < 10 ? i.ToString("D2") : i.ToString();
+                                //    var _item0 = string.Concat(_i, ":00");
+                                //    var _item1 = string.Concat(_i, ":30");
+                                //    comIntervalTimes.Items.Add(_item0);
+                                //    comIntervalTimes.Items.Add(_item1);
+                                //}
+
+                                //if(comInfo.schedule_times!=null)
+                                //    comIntervalTimes.SelectedIndex = comIntervalTimes.FindStringExact(comInfo.schedule_times);
+                                //if (comInfo.schedule_days != null)
+                                //{
+                                //    comIntervalDays.SelectedIndex = comIntervalDays.FindStringExact(comInfo.schedule_days);
+                                //}
+                                List<ProductCategory> catlist = await ItemEditModel.GetProductCategories(rest, PageBatchSize);
+                                foreach (var cat in catlist)
+                                {
+                                    ComboBoxItem item = new ComboBoxItem
+                                    {
+                                        Value = cat.id,
+                                        Text = cat.name
+                                    };
+                                    comProdCat.Items.Add(item);
+                                }
+                                if (comInfo.waDefaultProductCategory != null)
+                                    comProdCat.SelectedIndex = comProdCat.Items.Cast<ComboBoxItem>().ToList().FindIndex(a => a.Value.ToString() == comInfo.waDefaultProductCategory.ToString());
+                                else comProdCat.SelectedIndex = 1;
+                            }
                         }
                     }
                 }
             }
+            
         }
 
         private void ActivationOK(bool activation = true)
