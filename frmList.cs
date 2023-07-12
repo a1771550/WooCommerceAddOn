@@ -43,8 +43,10 @@ namespace WooCommerceAddOn
         public int ExpectedTotal = 0;
         public int ActualTotal = 0;
         //private int Page = 1;
-        private List<MyobCustomerModel> AbssCustomers { get; set; }
-        private List<MyobItemModel> AbssProducts { get; set; }
+        private List<MyobCustomerModel> MyobCustomers { get; set; }
+        private List<ABSSCustomerModel> ABSSCustomers { get; set; }
+        private List<MyobItemModel> MyobProducts { get; set; }
+        private List<ABSSItemModel> ABSSProducts { get; set; }
         private List<Customer> Customers { get; set; }
         private List<Order> Orders { get; set; }
         private List<Product> Products { get; set; }
@@ -73,7 +75,7 @@ namespace WooCommerceAddOn
             var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
             rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
 
-            if (type.ToString().StartsWith("Abss"))
+            if (type.ToString().StartsWith("Myob"))
             {
                 btnABSS.Enabled = false;
             }
@@ -84,16 +86,14 @@ namespace WooCommerceAddOn
 
             switch (type)
             {
-                case DataType.AbssCustomer:
-                    AbssCustomers = new List<MyobCustomerModel>();                    
-                    //url = string.Format("{0}/wp-json/wc/v3/customers/batch", comInfo.wcURL);
-                    //rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
+                case DataType.MyobCustomer:
+                    MyobCustomers = new List<MyobCustomerModel>();
+                    ABSSCustomers = new List<ABSSCustomerModel>();
                     this.Text = "ABSS Customer List";
                     break;
-                case DataType.AbssProduct:
-                    //url = string.Format("{0}/wp-json/wc/v3/products/batch", comInfo.wcURL);
-                    //rest = new RestAPI(url, comInfo.wcConsumerKey, comInfo.wcConsumerSecret);
-                    AbssProducts = new List<MyobItemModel>();
+                case DataType.MyobProduct:
+                    MyobProducts = new List<MyobItemModel>();
+                    ABSSProducts = new List<ABSSItemModel>();
                     this.Text = "ABSS Product List";
                     break;
                 case DataType.Product:
@@ -121,53 +121,74 @@ namespace WooCommerceAddOn
             btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] == "1";
             switch (type)
             {
-                case DataType.AbssCustomer:
+                case DataType.MyobCustomer:
                     HashSet<int> CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
-                    AbssCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",",CurrentCardRecordIds));
+                    if(CurrentCardRecordIds!=null)
+                        MyobCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",", CurrentCardRecordIds));
+                    else
+                        MyobCustomers = MYOBHelper.GetCustomerList(abss);
                     progressBar1.Visible = false;
-                    if (AbssCustomers.Count == 0)
-                    {
-                        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        Close();
-                        //AbssCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId);
-                        //btnWooCommerce.Enabled = false;
-                        //frmMain frmMain = new frmMain(false);
-                        //frmMain.ShowDialog();
+                    if (MyobCustomers.Count == 0)
+                    {                        
+                        ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
+                        if (ABSSCustomers.Count == 0)
+                        {
+                            MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Close();
+                        }
+                        else
+                        {
+                            type = DataType.AbssCustomer;
+                            totalpages = ABSSCustomers.Count / PageSize;
+                            TotalPage = (int)Math.Ceiling(totalpages);
+                            var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                            BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
+                            source = new BindingSource(bindingList_abssC, null);
+                            iTotal.Text = ABSSCustomers.Count.ToString();
+                        }  
                     }
                     else
                     {
-                        totalpages = AbssCustomers.Count / PageSize;
+                        totalpages = MyobCustomers.Count / PageSize;
                         TotalPage = (int)Math.Ceiling(totalpages);
-                        var mcustomers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        var mcustomers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                         BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
                         source = new BindingSource(bindingList_abssC, null);
-                        iTotal.Text = AbssCustomers.Count.ToString();
+                        iTotal.Text = MyobCustomers.Count.ToString();
                     }
-                    
                     break;
-                case DataType.AbssProduct:
-                    HashSet<int> CurrentItemIds = MyobItemEditModel.GetCurrentItemIds(comInfo.AccountProfileId);                    
-                    AbssProducts = MYOBHelper.GetItemList(abss, string.Join(",",CurrentItemIds));
+                case DataType.MyobProduct:
+                    HashSet<int> CurrentItemIds = MyobItemEditModel.GetCurrentItemIds(comInfo.AccountProfileId);
+                    MyobProducts = MYOBHelper.GetItemList(abss, string.Join(",", CurrentItemIds));
                     progressBar1.Visible = false;
-                    if (AbssProducts.Count == 0)
+                    if (MyobProducts.Count == 0)
                     {
-                        MessageBox.Show("All Items in ABSS are already uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        Close();
-                        //AbssProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId);
-                        //btnWooCommerce.Enabled = false;
-                        //frmMain frmMain = new frmMain(false);
-                        //frmMain.ShowDialog();
+                        ABSSProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId, false);
+                        if (ABSSProducts.Count == 0)
+                        {
+                            MessageBox.Show("All Items in ABSS are already uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Close();
+                        }
+                        else
+                        {
+                            type = DataType.AbssProduct;
+                            totalpages = ABSSProducts.Count / PageSize;
+                            TotalPage = (int)Math.Ceiling(totalpages);
+                            var mproducts = ABSSProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                            BindingList<ABSSItemModel> bindingList_abssP = new BindingList<ABSSItemModel>(mproducts);
+                            source = new BindingSource(bindingList_abssP, null);
+                            iTotal.Text = ABSSProducts.Count.ToString();
+                        }
                     }
                     else
                     {
-                        totalpages = AbssProducts.Count / PageSize;
+                        totalpages = MyobProducts.Count / PageSize;
                         TotalPage = (int)Math.Ceiling(totalpages);
-                        var mproducts = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        var mproducts = MyobProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                         BindingList<MyobItemModel> bindingList_abssP = new BindingList<MyobItemModel>(mproducts);
                         source = new BindingSource(bindingList_abssP, null);
-                        iTotal.Text = AbssProducts.Count.ToString();
+                        iTotal.Text = MyobProducts.Count.ToString();
                     }
-                    
                     break;
 
                 case DataType.Product:
@@ -229,20 +250,97 @@ namespace WooCommerceAddOn
             }
             dgList.DataSource = source;
             this.dgList.ReadOnly = true;
+            if (type == DataType.MyobCustomer)
+            {
+                int idx = 0;                            
+                dgList.Columns["CustomerID"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CardIdentification"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Name"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["FirstName"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["LastName"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Phone"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Email"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Phone"].DisplayIndex = idx;
+                idx++;               
+                dgList.Columns["StreetLine1"].DisplayIndex= idx;
+                idx++;
+                dgList.Columns["StreetLine2"].DisplayIndex = idx;
+                idx++; 
+                dgList.Columns["StreetLine3"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["StreetLine4"].DisplayIndex = idx;
+                idx++; 
+                dgList.Columns["City"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["State"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Postcode"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Country"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Web"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["Notes"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CustomField1"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CustomField2"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CustomField3"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CurrentBalance"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["TotalDeposits"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["CreditLimit"].DisplayIndex = idx;
+            }
             if (type == DataType.AbssCustomer)
             {
-                //dgList.Columns[0].Visible = false;               
-                dgList.Columns["CustomerID"].DisplayIndex = 0;
-                dgList.Columns["CardIdentification"].DisplayIndex = 1;
-                dgList.Columns["Name"].DisplayIndex = 2;
-                dgList.Columns["FirstName"].DisplayIndex = 3;
-                dgList.Columns["Notes"].DisplayIndex = 4;
-                dgList.Columns["CustomField1"].DisplayIndex = 5;
-                dgList.Columns["CustomField2"].DisplayIndex = 6;
-                dgList.Columns["CustomField3"].DisplayIndex = 7;
-                dgList.Columns["CurrentBalance"].DisplayIndex = 8;
-                dgList.Columns["TotalDeposits"].DisplayIndex = 9;
-                dgList.Columns["CreditLimit"].DisplayIndex = 10;
+                int idx = 0;               
+                dgList.Columns["cusName"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusFirstName"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusSurname"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusContact"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusPhone"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusEmail"].DisplayIndex = idx;
+                idx++;                
+                dgList.Columns["cusAddrStreetLine1"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrStreetLine2"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrStreetLine3"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrStreetLine4"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrStreetLine5"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrRegion"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrCity"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrState"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrPostcode"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrCountry"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrPhone1"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrPhone2"].DisplayIndex = idx;
+                idx++;
+                dgList.Columns["cusAddrPhone3"].DisplayIndex = idx;
             }
         }
 
@@ -251,7 +349,7 @@ namespace WooCommerceAddOn
             bool bok = false;
             switch (type)
             {
-                case DataType.AbssCustomer:
+                case DataType.MyobCustomer:
                     #region remove current data first:
                     //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
                     //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
@@ -259,7 +357,7 @@ namespace WooCommerceAddOn
                     #endregion
 
                     #region add data:
-                    bok = await MyobCustomerEditModel.AddList(AbssCustomers, comInfo.AccountProfileId);
+                    bok = await MyobCustomerEditModel.AddList(MyobCustomers, comInfo.AccountProfileId);
                     if (bok)
                     {
                         progressBar1.Visible = false;
@@ -267,7 +365,7 @@ namespace WooCommerceAddOn
                     }
                     #endregion
                     break;
-                case DataType.AbssProduct:
+                case DataType.MyobProduct:
                     #region remove current data first:
                     //var itemIds = AbssProducts.Select(x=>x.ItemID).Distinct().ToHashSet();
                     //MyobItemEditModel.RemoveByItemIds(comInfo.AccountProfileId, itemIds);
@@ -275,7 +373,7 @@ namespace WooCommerceAddOn
                     #endregion
 
                     #region add data:
-                    bok = await MyobItemEditModel.AddList(AbssProducts, comInfo.AccountProfileId);
+                    bok = await MyobItemEditModel.AddList(MyobProducts, comInfo.AccountProfileId);
                     if (bok)
                     {
                         progressBar1.Visible = false;
@@ -511,7 +609,7 @@ namespace WooCommerceAddOn
             AbssResult result;
             switch (type)
             {
-                case DataType.Product:  
+                case DataType.Product:
                     if (ItemEditModel.GetWooItemCount(AccountProfileId) == 0)
                     {
                         progressBar1.Visible = false;
@@ -564,12 +662,12 @@ namespace WooCommerceAddOn
                 default:
                 case DataType.Order:
                     bool islocked = false;
-                    FileInfo fileInfo = new FileInfo(Path.Combine(comInfo.abssFileLocation,comInfo.abssFileName));
+                    FileInfo fileInfo = new FileInfo(Path.Combine(comInfo.abssFileLocation, comInfo.abssFileName));
                     if (fileInfo.Exists)
                     {
                         islocked = FileHelper.IsFileLocked(fileInfo);
                     }
-                    if(islocked)
+                    if (islocked)
                     {
                         MessageBox.Show("The ABSS file is being locked. Please make sure the file is unlocked before trying to do data transference.", "ABSS", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
@@ -622,7 +720,7 @@ namespace WooCommerceAddOn
                             }
                         }
                     }
-                    
+
                     break;
             }
         }
@@ -635,7 +733,8 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.AbssCustomer:
-                    bok = await MyobCustomerEditModel.UpdateWoo(rest);
+                case DataType.MyobCustomer:
+                    bok = await MyobCustomerEditModel.UpdateWoo(rest, comInfo);
                     waitForm.Close();
                     if (bok)
                     {
@@ -645,6 +744,7 @@ namespace WooCommerceAddOn
                     break;
                 default:
                 case DataType.AbssProduct:
+                case DataType.MyobProduct:
                     bok = await MyobItemEditModel.UpdateWoo(rest, comInfo);
                     waitForm.Close();
                     if (bok)
@@ -653,7 +753,7 @@ namespace WooCommerceAddOn
                         MessageBox.Show("Products Uploaded to WooCommerce", "Upload Products", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     break;
-            }             
+            }
         }
 
 
@@ -670,11 +770,11 @@ namespace WooCommerceAddOn
             {
                 var CurrentItemCodes = MYOBHelper.GetItemCodes(abss);
                 List<ItemModel> FilteredWooItemList = CurrentWooItemList.Where(x => !CurrentItemCodes.Contains(x.itmCode)).ToList();
-                if(FilteredWooItemList.Count == 0)
+                if (FilteredWooItemList.Count == 0)
                 {
                     MessageBox.Show("No New Item Data Found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     return null;
-                }                
+                }
 
                 using (var context = new WADbContext())
                 {
@@ -773,12 +873,12 @@ namespace WooCommerceAddOn
             switch (type)
             {
                 case DataType.AbssCustomer:
-                    var customers = AbssCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var customers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                     var bindingList_C = new BindingList<MyobCustomerModel>(customers);
                     return new BindingSource(bindingList_C, null);
 
                 case DataType.AbssProduct:
-                    var products = AbssProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var products = MyobProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
                     var bindingList_P = new BindingList<MyobItemModel>(products);
                     return new BindingSource(bindingList_P, null);
                 default:

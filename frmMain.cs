@@ -202,14 +202,14 @@ namespace WooCommerceAddOn
 
         private void btnGetAbssProduct_Click(object sender, EventArgs e)
         {
-            comInfo.dataType = DataType.AbssProduct;
+            comInfo.dataType = DataType.MyobProduct;
             frmList frmList = new(comInfo);
             frmList.ShowDialog();
         }
 
         private void btnGetAbssCustomer_Click(object sender, EventArgs e)
         {
-            comInfo.dataType = DataType.AbssCustomer;
+            comInfo.dataType = DataType.MyobCustomer;
             frmList frmList = new(comInfo);
             frmList.ShowDialog();
         }
