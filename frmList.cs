@@ -208,6 +208,7 @@ namespace WooCommerceAddOn
                     BindingList<Product> bindingList_P = new BindingList<Product>(products);
                     source = new BindingSource(bindingList_P, null);
                     iTotal.Text = Products.Count.ToString();
+                    btnABSS.Enabled = false;
                     break;
                 case DataType.Customer:
                     for (int i = 1; i <= PageBatchSize; i++)
@@ -227,12 +228,15 @@ namespace WooCommerceAddOn
                     BindingList<Customer> bindingList_C = new BindingList<Customer>(customers);
                     source = new BindingSource(bindingList_C, null);
                     iTotal.Text = Customers.Count.ToString();
+                    btnABSS.Enabled = false;
                     break;
                 default:
                 case DataType.Order:
+                    string frmdate = "2023-07-13T00:00:00";
+                    string todate = "2023-07-14T23:59:59";
                     for (int i = 1; i <= PageBatchSize; i++)
                     {
-                        var _orders = await ModelHelper.GetWooOrder(rest, i);
+                        var _orders = await ModelHelper.GetWooOrder(rest, i, frmdate, todate);
                         if (_orders != null && _orders.Count > 0)
                             Orders.AddRange(_orders);
                     }
@@ -457,6 +461,9 @@ namespace WooCommerceAddOn
                         foreach (var c in Customers)
                         {
                             string cuscode = CommonHelper.GenerateNonce(CustomerCodeLength);
+                            string fname = c.first_name.Length > 20 ? c.first_name.Substring(0, 20) : c.first_name;
+                            string lname = c.last_name.Length > 50 ? c.last_name.Substring(0, 50) : c.last_name;
+                            string uname = c.username.Length > 50 ? c.username.Substring(0, 50) : c.username;
                             CustomerModel customer = new CustomerModel
                             {
                                 cusCustomerID = (int)c.id,
@@ -464,13 +471,13 @@ namespace WooCommerceAddOn
                                 cusCreateTime = c.date_created_gmt,
                                 cusModifyTime = c.date_modified_gmt,
                                 cusEmail = c.email,
-                                cusFirstName = c.first_name,
-                                cusLastName = c.last_name,
-                                cusName = c.username,
+                                cusFirstName = fname,
+                                cusLastName = lname,
+                                cusName = uname,
                                 cusPointsUsed = 0,
                                 cusRole = c.role,
                                 cusPhone = c.billing.phone,
-                                cusContact = c.username
+                                cusContact = uname
                             };
                             //customer.cusPointsSoFar = await GetCustomerPointFrmOrders((long)c.id);
                             customerlist.Add(customer);
@@ -483,7 +490,7 @@ namespace WooCommerceAddOn
                                 {
                                     try
                                     {
-                                        await CustomerEditModel.AddList(customerlist, context);
+                                        CustomerEditModel.AddList(customerlist, context);
                                         transaction.Commit();
                                         progressBar1.Visible = false;
                                         MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -523,20 +530,26 @@ namespace WooCommerceAddOn
                             progressBar1.Visible = true;
                             progressBar1.Style = ProgressBarStyle.Marquee;
                             var currentSalesIds = SalesEditModel.GetWooSalesIdList(abss);
+
+                            if (currentSalesIds.Count > 0)
+                            {
+                                
+                            }
+
                             List<SalesModel> saleslist = new List<SalesModel>();
                             List<SalesLnView> salelnslist = new List<SalesLnView>();
                             List<SalesLnView> currentwoosaless = new List<SalesLnView>();
-                            List<Order> neworders = new List<Order>();
+                            //List<Order> neworders = new List<Order>();
 
-                            foreach (Order order in Orders)
-                            {
-                                if (!currentSalesIds.Any(x => x == (int)order.id))
-                                {
-                                    neworders.Add(order);
-                                }
-                            }
+                            //foreach (Order order in Orders)
+                            //{
+                            //    if (!currentSalesIds.Any(x => x == (int)order.id))
+                            //    {
+                            //        neworders.Add(order);
+                            //    }
+                            //}
 
-                            if (neworders.Count > 0)
+                            if (Orders.Count > 0)
                             {
                                 using (var context = new WADbContext())
                                 {
@@ -544,7 +557,7 @@ namespace WooCommerceAddOn
                                     {
                                         try
                                         {
-                                            List<int> abssMissingItemIdList = ModelHelper.AddSales(neworders, comInfo, context, ref FouledOrderIdList);
+                                            List<int> abssMissingItemIdList = ModelHelper.AddSales(Orders, comInfo, context, ref FouledOrderIdList);
                                             progressBar1.Visible = false;
                                             if (abssMissingItemIdList.Count == 0)
                                             {
@@ -576,6 +589,7 @@ namespace WooCommerceAddOn
                                                 MessageBox.Show(msg, "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                             }
+                                            transaction.Commit();
                                         }
                                         catch (Exception ex)
                                         {
@@ -759,7 +773,7 @@ namespace WooCommerceAddOn
 
         private async Task<AbssResult> WriteItemToABSS()
         {
-            var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId, false);
+            var CurrentWooItemList = ItemEditModel.GetWooItemList(AccountProfileId);
 
             if (CurrentWooItemList.Count == 0)
             {
@@ -802,7 +816,7 @@ namespace WooCommerceAddOn
 
         private async Task<AbssResult> WriteCustomerToABSS()
         {
-            var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId, false);
+            var CurrentWooCustomerList = CustomerEditModel.GetWooCustomerList(AccountProfileId);
             if (CurrentWooCustomerList.Count == 0)
             {
                 MessageBox.Show("No Customer Data Found.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);

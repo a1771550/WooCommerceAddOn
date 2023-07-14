@@ -123,6 +123,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "frmSalesDate";
             this.Text = "Sales Date";
+            this.Load += new System.EventHandler(this.frmSalesDate_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

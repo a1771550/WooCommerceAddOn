@@ -52,5 +52,10 @@ namespace WooCommerceAddOn
         {
             IncludeUploaded = chkIncUploaded.Checked;
         }
+
+        private void frmSalesDate_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
