@@ -553,7 +553,7 @@ namespace WooCommerceAddOn
                                 }
                             }
 
-                            if (Orders.Count > 0)
+                            if (neworders.Count > 0)
                             {
                                 using (var context = new WADbContext())
                                 {
@@ -561,7 +561,7 @@ namespace WooCommerceAddOn
                                     {
                                         try
                                         {
-                                            List<int> abssMissingItemIdList = ModelHelper.AddSales(Orders, comInfo, context, ref FouledOrderIdList);
+                                            List<int> abssMissingItemIdList = ModelHelper.AddSales(neworders, comInfo, context, ref FouledOrderIdList);
                                             progressBar1.Visible = false;
                                             if (abssMissingItemIdList.Count == 0)
                                             {
