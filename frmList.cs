@@ -232,29 +232,36 @@ namespace WooCommerceAddOn
                     break;
                 default:
                 case DataType.Order:
-                    string frmdate = "2023-07-13T00:00:00";
-                    string todate = "2023-07-14T23:59:59";
-                    for (int i = 1; i <= PageBatchSize; i++)
+                    frmSalesDate frmSalesDate = new frmSalesDate(comInfo.abssDateFormat);
+                    frmSalesDate.ShowDialog();
+                    if (frmSalesDate.dialogResult == DialogResult.OK)
                     {
-                        var _orders = await ModelHelper.GetWooOrder(rest, i, frmdate, todate);
-                        if (_orders != null && _orders.Count > 0)
-                            Orders.AddRange(_orders);
-                    }
-                    progressBar1.Visible = false;
-                    totalpages = Orders.Count / PageSize;
-                    TotalPage = (int)Math.Ceiling(totalpages);
-                    Orders = Orders.OrderByDescending(x => x.date_created).ToList();
+                        //string frmdate = "2023-07-13T00:00:00";
+                        //string todate = "2023-07-14T23:59:59";
+                        string frmdate = string.Concat(CommonHelper.FormatDate(frmSalesDate.frmDate), "T00:00:00");
+                        string todate = string.Concat(CommonHelper.FormatDate(frmSalesDate.toDate), "T23:59:59");
+                        for (int i = 1; i <= PageBatchSize; i++)
+                        {
+                            var _orders = await ModelHelper.GetWooOrder(rest, i, frmdate, todate);
+                            if (_orders != null && _orders.Count > 0)
+                                Orders.AddRange(_orders);
+                        }
+                        progressBar1.Visible = false;
+                        totalpages = Orders.Count / PageSize;
+                        TotalPage = (int)Math.Ceiling(totalpages);
+                        Orders = Orders.OrderByDescending(x => x.date_created).ToList();
 
-                    var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    BindingList<Order> bindingList_O = new BindingList<Order>(orders);
-                    source = new BindingSource(bindingList_O, null);
-                    iTotal.Text = Orders.Count.ToString();
+                        var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        BindingList<Order> bindingList_O = new BindingList<Order>(orders);
+                        source = new BindingSource(bindingList_O, null);
+                        iTotal.Text = Orders.Count.ToString();
+                    }                       
                     break;
 
             }
             dgList.DataSource = source;
             this.dgList.ReadOnly = true;
-            if (type == DataType.MyobCustomer)
+            if (type == DataType.MyobCustomer && dgList.Rows.Count>0)
             {
                 int idx = 0;                            
                 dgList.Columns["CustomerID"].DisplayIndex = idx;
@@ -305,7 +312,7 @@ namespace WooCommerceAddOn
                 idx++;
                 dgList.Columns["CreditLimit"].DisplayIndex = idx;
             }
-            if (type == DataType.AbssCustomer)
+            if (type == DataType.AbssCustomer && dgList.Rows.Count>0)
             {
                 int idx = 0;               
                 dgList.Columns["cusName"].DisplayIndex = idx;
@@ -350,7 +357,7 @@ namespace WooCommerceAddOn
 
         private async void btnSaveDB_Click(object sender, EventArgs e)
         {
-            bool bok = false;
+            bool bok;
             switch (type)
             {
                 case DataType.MyobCustomer:
@@ -451,12 +458,7 @@ namespace WooCommerceAddOn
                         progressBar1.Style = ProgressBarStyle.Marquee;
 
                         List<CustomerModel> customerlist = new List<CustomerModel>();
-                        List<CustomerModel> currentwoocustomers = new List<CustomerModel>();
-
-                        #region remove current data first:
-                        CustomerEditModel.RemoveAll();
-                        #endregion
-
+                        //List<CustomerModel> currentwoocustomers = new List<CustomerModel>();
                         #region add data:
                         foreach (var c in Customers)
                         {
@@ -464,6 +466,9 @@ namespace WooCommerceAddOn
                             string fname = c.first_name.Length > 20 ? c.first_name.Substring(0, 20) : c.first_name;
                             string lname = c.last_name.Length > 50 ? c.last_name.Substring(0, 50) : c.last_name;
                             string uname = c.username.Length > 50 ? c.username.Substring(0, 50) : c.username;
+                            //string fname = c.first_name;
+                            //string lname = c.last_name;
+                            //string uname = c.username;
                             CustomerModel customer = new CustomerModel
                             {
                                 cusCustomerID = (int)c.id,
@@ -490,6 +495,10 @@ namespace WooCommerceAddOn
                                 {
                                     try
                                     {
+                                        #region remove current data first:
+                                        CustomerEditModel.RemoveAll();
+                                        #endregion
+
                                         CustomerEditModel.AddList(customerlist, context);
                                         transaction.Commit();
                                         progressBar1.Visible = false;
@@ -531,23 +540,18 @@ namespace WooCommerceAddOn
                             progressBar1.Style = ProgressBarStyle.Marquee;
                             var currentSalesIds = SalesEditModel.GetWooSalesIdList(abss);
 
-                            if (currentSalesIds.Count > 0)
-                            {
-                                
-                            }
-
                             List<SalesModel> saleslist = new List<SalesModel>();
                             List<SalesLnView> salelnslist = new List<SalesLnView>();
                             List<SalesLnView> currentwoosaless = new List<SalesLnView>();
-                            //List<Order> neworders = new List<Order>();
+                            List<Order> neworders = new List<Order>();
 
-                            //foreach (Order order in Orders)
-                            //{
-                            //    if (!currentSalesIds.Any(x => x == (int)order.id))
-                            //    {
-                            //        neworders.Add(order);
-                            //    }
-                            //}
+                            foreach (Order order in Orders)
+                            {
+                                if (currentSalesIds.Count>0 && !currentSalesIds.Any(x => x == (int)order.id))
+                                {
+                                    neworders.Add(order);
+                                }
+                            }
 
                             if (Orders.Count > 0)
                             {
