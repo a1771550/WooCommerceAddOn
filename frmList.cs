@@ -120,7 +120,7 @@ namespace WooCommerceAddOn
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
             decimal totalpages = 0;
-            btnABSS.Enabled = false;
+            btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] =="1";
             switch (type)
             {
                 case DataType.MyobCustomer:
