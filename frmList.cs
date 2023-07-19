@@ -48,6 +48,7 @@ namespace WooCommerceAddOn
         private List<MyobItemModel> MyobProducts { get; set; }
         private List<ABSSItemModel> ABSSProducts { get; set; }
         private List<Customer> Customers { get; set; }
+        private List<MyobEmployeeModel> EmployeeList { get; set; }
         private List<Order> Orders { get; set; }
         private List<Product> Products { get; set; }
         private ABSSModel abss { get; set; }
@@ -89,6 +90,7 @@ namespace WooCommerceAddOn
                 case DataType.MyobCustomer:
                     MyobCustomers = new List<MyobCustomerModel>();
                     ABSSCustomers = new List<ABSSCustomerModel>();
+                    EmployeeList = new List<MyobEmployeeModel>();
                     this.Text = "ABSS Customer List";
                     break;
                 case DataType.MyobProduct:
@@ -118,44 +120,47 @@ namespace WooCommerceAddOn
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
             decimal totalpages = 0;
-            btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] == "1";
+            btnABSS.Enabled = false;
             switch (type)
             {
                 case DataType.MyobCustomer:
-                    HashSet<int> CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
-                    if(CurrentCardRecordIds!=null)
-                        MyobCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",", CurrentCardRecordIds));
-                    else
-                        MyobCustomers = MYOBHelper.GetCustomerList(abss);
+                    //HashSet<int> CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
+                    //if (CurrentCardRecordIds != null)
+                    //    MyobCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",", CurrentCardRecordIds));
+                    //else
+                    MyobCustomers = MYOBHelper.GetCustomerList(abss);
+
+                    EmployeeList = MYOBHelper.GetEmployeeList(abss);
+
                     progressBar1.Visible = false;
-                    if (MyobCustomers.Count == 0)
-                    {                        
-                        ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
-                        if (ABSSCustomers.Count == 0)
-                        {
-                            MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            Close();
-                        }
-                        else
-                        {
-                            type = DataType.AbssCustomer;
-                            totalpages = ABSSCustomers.Count / PageSize;
-                            TotalPage = (int)Math.Ceiling(totalpages);
-                            var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                            BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
-                            source = new BindingSource(bindingList_abssC, null);
-                            iTotal.Text = ABSSCustomers.Count.ToString();
-                        }  
-                    }
-                    else
-                    {
-                        totalpages = MyobCustomers.Count / PageSize;
-                        TotalPage = (int)Math.Ceiling(totalpages);
-                        var mcustomers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                        BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
-                        source = new BindingSource(bindingList_abssC, null);
-                        iTotal.Text = MyobCustomers.Count.ToString();
-                    }
+                    //if (MyobCustomers.Count == 0)
+                    //{
+                    //    ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
+                    //    if (ABSSCustomers.Count == 0)
+                    //    {
+                    //        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //        Close();
+                    //    }
+                    //    else
+                    //    {
+                    //        type = DataType.AbssCustomer;
+                    //        totalpages = ABSSCustomers.Count / PageSize;
+                    //        TotalPage = (int)Math.Ceiling(totalpages);
+                    //        var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    //        BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
+                    //        source = new BindingSource(bindingList_abssC, null);
+                    //        iTotal.Text = ABSSCustomers.Count.ToString();
+                    //    }
+                    //}
+                    //else
+                    //{
+                    totalpages = MyobCustomers.Count / PageSize;
+                    TotalPage = (int)Math.Ceiling(totalpages);
+                    var mcustomers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
+                    source = new BindingSource(bindingList_abssC, null);
+                    iTotal.Text = MyobCustomers.Count.ToString();
+                    //}
                     break;
                 case DataType.MyobProduct:
                     HashSet<int> CurrentItemIds = MyobItemEditModel.GetCurrentItemIds(comInfo.AccountProfileId);
@@ -232,6 +237,7 @@ namespace WooCommerceAddOn
                     break;
                 default:
                 case DataType.Order:
+                    btnABSS.Enabled = true;
                     frmSalesDate frmSalesDate = new frmSalesDate(comInfo.abssDateFormat);
                     frmSalesDate.ShowDialog();
                     if (frmSalesDate.dialogResult == DialogResult.OK)
@@ -252,18 +258,55 @@ namespace WooCommerceAddOn
                         Orders = Orders.OrderByDescending(x => x.date_created).ToList();
 
                         var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                        BindingList<Order> bindingList_O = new BindingList<Order>(orders);
+                        List<OrderModel> orderlist = new List<OrderModel>();
+                        foreach (var order in orders)
+                        {
+                            orderlist.Add(new OrderModel
+                            {
+                                id = order.id,
+                                parent_id = order.parent_id,
+                                number = order.number,
+                                order_key = order.order_key,
+                                created_via = order.created_via,
+                                version = order.version,
+                                status = order.status,
+                                currency = order.currency,
+                                customer_id = order.customer_id,
+                                billing = new WooCommerceNET.WooCommerce.v2.OrderBilling
+                                {
+                                    first_name = order.billing.first_name,
+                                    last_name = order.billing.last_name,
+                                    email = order.billing.email,
+                                    city = order.billing.city,
+                                    country = order.billing.country,
+                                    address_1 = order.billing.address_1,
+                                    address_2 = order.billing.address_2,
+                                    phone = order.billing.phone,
+                                },
+                                date_created = order.date_created,
+                                date_modified = order.date_modified,
+                                date_completed = order.date_completed,
+                                discount_tax = order.discount_tax,
+                                discount_total = order.discount_total,
+                                shipping_tax = order.shipping_tax,
+                                shipping_total = order.shipping_total,
+                                total = order.total,
+                                total_tax = order.total_tax,
+                                prices_include_tax = order.prices_include_tax,
+                            });
+                        }
+                        BindingList<OrderModel> bindingList_O = new BindingList<OrderModel>(orderlist);
                         source = new BindingSource(bindingList_O, null);
                         iTotal.Text = Orders.Count.ToString();
-                    }                       
+                    }
                     break;
 
             }
             dgList.DataSource = source;
             this.dgList.ReadOnly = true;
-            if (type == DataType.MyobCustomer && dgList.Rows.Count>0)
+            if (type == DataType.MyobCustomer && dgList.Rows.Count > 0)
             {
-                int idx = 0;                            
+                int idx = 0;
                 dgList.Columns["CustomerID"].DisplayIndex = idx;
                 idx++;
                 dgList.Columns["CardIdentification"].DisplayIndex = idx;
@@ -278,16 +321,14 @@ namespace WooCommerceAddOn
                 idx++;
                 dgList.Columns["Email"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["Phone"].DisplayIndex = idx;
-                idx++;               
-                dgList.Columns["StreetLine1"].DisplayIndex= idx;
+                dgList.Columns["StreetLine1"].DisplayIndex = idx;
                 idx++;
                 dgList.Columns["StreetLine2"].DisplayIndex = idx;
-                idx++; 
+                idx++;
                 dgList.Columns["StreetLine3"].DisplayIndex = idx;
                 idx++;
                 dgList.Columns["StreetLine4"].DisplayIndex = idx;
-                idx++; 
+                idx++;
                 dgList.Columns["City"].DisplayIndex = idx;
                 idx++;
                 dgList.Columns["State"].DisplayIndex = idx;
@@ -312,46 +353,93 @@ namespace WooCommerceAddOn
                 idx++;
                 dgList.Columns["CreditLimit"].DisplayIndex = idx;
             }
-            if (type == DataType.AbssCustomer && dgList.Rows.Count>0)
+            //if (type == DataType.AbssCustomer && dgList.Rows.Count > 0)
+            //{
+            //    int idx = 0;
+            //    dgList.Columns["cusName"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusFirstName"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusSurname"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusContact"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusPhone"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusEmail"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrStreetLine1"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrStreetLine2"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrStreetLine3"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrStreetLine4"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrStreetLine5"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrRegion"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrCity"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrState"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrPostcode"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrCountry"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrPhone1"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrPhone2"].DisplayIndex = idx;
+            //    idx++;
+            //    dgList.Columns["cusAddrPhone3"].DisplayIndex = idx;
+            //}
+            if (type == DataType.Order && dgList.Rows.Count > 0)
             {
-                int idx = 0;               
-                dgList.Columns["cusName"].DisplayIndex = idx;
+                int idx = 0;
+                dgList.Columns["id"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusFirstName"].DisplayIndex = idx;
+                dgList.Columns["number"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusSurname"].DisplayIndex = idx;
+                dgList.Columns["parent_id"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusContact"].DisplayIndex = idx;
+                dgList.Columns["order_key"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusPhone"].DisplayIndex = idx;
+                dgList.Columns["created_via"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusEmail"].DisplayIndex = idx;
-                idx++;                
-                dgList.Columns["cusAddrStreetLine1"].DisplayIndex = idx;
+                dgList.Columns["status"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusAddrStreetLine2"].DisplayIndex = idx;
+                dgList.Columns["currency"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusAddrStreetLine3"].DisplayIndex = idx;
+                dgList.Columns["customer_id"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusAddrStreetLine4"].DisplayIndex = idx;
+                dgList.Columns["BillingFName"].DisplayIndex = idx;
+                dgList.Columns["BillingFName"].HeaderText = "First Name";
                 idx++;
-                dgList.Columns["cusAddrStreetLine5"].DisplayIndex = idx;
+                dgList.Columns["BillingLName"].DisplayIndex = idx;
+                dgList.Columns["BillingLName"].HeaderText = "Last Name";
                 idx++;
-                dgList.Columns["cusAddrRegion"].DisplayIndex = idx;
+                dgList.Columns["Email"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusAddrCity"].DisplayIndex = idx;
+                dgList.Columns["Phone"].DisplayIndex = idx;
                 idx++;
-                dgList.Columns["cusAddrState"].DisplayIndex = idx;
+                dgList.Columns["BillingAddr1"].DisplayIndex = idx;
+                dgList.Columns["BillingAddr1"].HeaderText = "Address 1";
                 idx++;
-                dgList.Columns["cusAddrPostcode"].DisplayIndex = idx;
+                dgList.Columns["BillingAddr2"].DisplayIndex = idx;
+                dgList.Columns["BillingAddr2"].HeaderText = "Address 2";
                 idx++;
-                dgList.Columns["cusAddrCountry"].DisplayIndex = idx;
+                dgList.Columns["BillingCity"].DisplayIndex = idx;
+                dgList.Columns["BillingCity"].HeaderText = "City";
                 idx++;
-                dgList.Columns["cusAddrPhone1"].DisplayIndex = idx;
-                idx++;
-                dgList.Columns["cusAddrPhone2"].DisplayIndex = idx;
-                idx++;
-                dgList.Columns["cusAddrPhone3"].DisplayIndex = idx;
+                dgList.Columns["BillingCountry"].DisplayIndex = idx;
+                dgList.Columns["BillingCountry"].HeaderText = "Country";
+                //idx++;
+                //dgList.Columns["cusAddrPhone1"].DisplayIndex = idx;
+                //idx++;
+                //dgList.Columns["cusAddrPhone2"].DisplayIndex = idx;
+                //idx++;
+                //dgList.Columns["cusAddrPhone3"].DisplayIndex = idx;
             }
         }
 
@@ -365,11 +453,13 @@ namespace WooCommerceAddOn
                     //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
                     //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
                     MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
+                    MyobEmployeeEditModel.RemoveAll(comInfo.AccountProfileId);
                     #endregion
 
                     #region add data:
-                    bok = await MyobCustomerEditModel.AddList(MyobCustomers, comInfo.AccountProfileId);
-                    if (bok)
+                    bool cbok = await MyobCustomerEditModel.AddList(MyobCustomers, comInfo.AccountProfileId);
+                    bool ebok = await MyobEmployeeEditModel.AddList(EmployeeList, comInfo.AccountProfileId);
+                    if (cbok && ebok)
                     {
                         progressBar1.Visible = false;
                         MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -547,7 +637,11 @@ namespace WooCommerceAddOn
 
                             foreach (Order order in Orders)
                             {
-                                if (currentSalesIds.Count>0 && !currentSalesIds.Any(x => x == (int)order.id))
+                                if (currentSalesIds.Count > 0 && !currentSalesIds.Any(x => x == (int)order.id))
+                                {
+                                    neworders.Add(order);
+                                }
+                                else
                                 {
                                     neworders.Add(order);
                                 }
