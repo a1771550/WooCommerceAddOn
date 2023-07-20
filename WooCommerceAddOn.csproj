@@ -371,10 +371,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MYOBLib\MYOBLib.csproj">
-      <Project>{FCC0CA95-39BA-49E4-99E9-8186F9A90D2E}</Project>
-      <Name>MYOBLib</Name>
-    </ProjectReference>
     <ProjectReference Include="..\CommonLib\CommonLib.csproj">
       <Project>{7125bade-3ff9-4d3f-a8bb-65d6ccf9e5a8}</Project>
       <Name>CommonLib</Name>
@@ -390,6 +386,10 @@
     <ProjectReference Include="..\WALib\WALib.csproj">
       <Project>{393a041d-cb15-4259-8eb2-ffa2f1dfd09e}</Project>
       <Name>WALib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WooMyobLib\WooMyobLib.csproj">
+      <Project>{c273f6a1-cf2c-4e7e-98d6-fff7fd449078}</Project>
+      <Name>WooMyobLib</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

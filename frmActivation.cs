@@ -1,6 +1,6 @@
 ﻿using CommonLib.Helpers;
 using CommonLib.Models.MYOB;
-using MYOBLib;
+using WooMyobLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

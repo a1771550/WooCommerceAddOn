@@ -1,4 +1,4 @@
-﻿using MYOBLib;
+﻿using WooMyobLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +15,7 @@ using WooCommerceNET;
 using WADAL;
 using CommonLib.Helpers;
 using ModelHelper = WALib.Helpers.ModelHelper;
-using MYOBLib.Models;
+using WooMyobLib.Models;
 using WALib.Models.MYOB;
 using WaitWnd;
 using MyobCustomerModel = WALib.Models.MYOB.MyobCustomerModel;
