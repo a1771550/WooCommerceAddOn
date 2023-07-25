@@ -10,6 +10,7 @@ using WALib.Models;
 using WooCommerceNET;
 using WooCommerceNET.WooCommerce.v3;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using WooMyobLib.Models;
 
 namespace WooCommerceAddOn
 {

@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WALib.Models;
+using WooMyobLib.Models;
 
 namespace WooCommerceAddOn
 {

@@ -20,6 +20,7 @@ using WALib.Models.MYOB;
 using WaitWnd;
 using MyobCustomerModel = WALib.Models.MYOB.MyobCustomerModel;
 using System.IO;
+using System.Windows.Interop;
 
 namespace WooCommerceAddOn
 {
@@ -49,6 +50,7 @@ namespace WooCommerceAddOn
         private List<ABSSItemModel> ABSSProducts { get; set; }
         private List<Customer> Customers { get; set; }
         private List<MyobEmployeeModel> EmployeeList { get; set; }
+        private HashSet<int> CurrentCardRecordIds { get; set; }
         private List<Order> Orders { get; set; }
         private List<Product> Products { get; set; }
         private ABSSModel abss { get; set; }
@@ -91,6 +93,7 @@ namespace WooCommerceAddOn
                     MyobCustomers = new List<MyobCustomerModel>();
                     ABSSCustomers = new List<ABSSCustomerModel>();
                     EmployeeList = new List<MyobEmployeeModel>();
+                    CurrentCardRecordIds = new HashSet<int>();
                     this.Text = "ABSS Customer List";
                     break;
                 case DataType.MyobProduct:
@@ -120,47 +123,47 @@ namespace WooCommerceAddOn
             progressBar1.Visible = true;
             progressBar1.Style = ProgressBarStyle.Marquee;
             decimal totalpages = 0;
-            btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] =="1";
+            btnABSS.Enabled = ConfigurationManager.AppSettings["EnableAbssUpload"] == "1";
             switch (type)
             {
                 case DataType.MyobCustomer:
-                    //HashSet<int> CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
-                    //if (CurrentCardRecordIds != null)
-                    //    MyobCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",", CurrentCardRecordIds));
-                    //else
-                    MyobCustomers = MYOBHelper.GetCustomerList(abss);
+                    CurrentCardRecordIds = MyobCustomerEditModel.GetCurrentCardRecordIds(comInfo.AccountProfileId);
+                    if (CurrentCardRecordIds != null)
+                        MyobCustomers = MYOBHelper.GetCustomerList(abss, string.Join(",", CurrentCardRecordIds));
+                    else
+                        MyobCustomers = MYOBHelper.GetCustomerList(abss);
 
                     EmployeeList = MYOBHelper.GetEmployeeList(abss);
 
                     progressBar1.Visible = false;
-                    //if (MyobCustomers.Count == 0)
-                    //{
-                    //    ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
-                    //    if (ABSSCustomers.Count == 0)
-                    //    {
-                    //        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    //        Close();
-                    //    }
-                    //    else
-                    //    {
-                    //        type = DataType.AbssCustomer;
-                    //        totalpages = ABSSCustomers.Count / PageSize;
-                    //        TotalPage = (int)Math.Ceiling(totalpages);
-                    //        var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    //        BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
-                    //        source = new BindingSource(bindingList_abssC, null);
-                    //        iTotal.Text = ABSSCustomers.Count.ToString();
-                    //    }
-                    //}
-                    //else
-                    //{
-                    totalpages = MyobCustomers.Count / PageSize;
-                    TotalPage = (int)Math.Ceiling(totalpages);
-                    var mcustomers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                    BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
-                    source = new BindingSource(bindingList_abssC, null);
-                    iTotal.Text = MyobCustomers.Count.ToString();
-                    //}
+                    if (MyobCustomers.Count == 0)
+                    {
+                        //ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
+                        //if (ABSSCustomers.Count == 0)
+                        //{
+                        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Close();
+                        //}
+                        //else
+                        //{
+                        //type = DataType.AbssCustomer;
+                        //totalpages = ABSSCustomers.Count / PageSize;
+                        //TotalPage = (int)Math.Ceiling(totalpages);
+                        //var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        //BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
+                        //source = new BindingSource(bindingList_abssC, null);
+                        //iTotal.Text = ABSSCustomers.Count.ToString();
+                        //}
+                    }
+                    else
+                    {
+                        totalpages = MyobCustomers.Count / PageSize;
+                        TotalPage = (int)Math.Ceiling(totalpages);
+                        var mcustomers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        BindingList<MyobCustomerModel> bindingList_abssC = new BindingList<MyobCustomerModel>(mcustomers);
+                        source = new BindingSource(bindingList_abssC, null);
+                        iTotal.Text = MyobCustomers.Count.ToString();
+                    }
                     break;
                 case DataType.MyobProduct:
                     HashSet<int> CurrentItemIds = MyobItemEditModel.GetCurrentItemIds(comInfo.AccountProfileId);
@@ -446,19 +449,39 @@ namespace WooCommerceAddOn
         private async void btnSaveDB_Click(object sender, EventArgs e)
         {
             bool bok;
+            bool cbok;
+            bool ebok;
             switch (type)
             {
+                //case DataType.AbssCustomer:
+                //    #region remove current data first:
+                //    //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
+                //    //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
+                //    //MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
+                //    MyobEmployeeEditModel.RemoveAll(comInfo.AccountProfileId);
+                //    #endregion
+
+                //    #region add data:
+                //    cbok = await MyobCustomerEditModel.AddList(ABSSCustomers, comInfo.AccountProfileId);
+                //    ebok = await MyobEmployeeEditModel.AddList(EmployeeList, comInfo.AccountProfileId);
+                //    if (cbok && ebok)
+                //    {
+                //        progressBar1.Visible = false;
+                //        MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //    }
+                //    #endregion
+                //    break;
                 case DataType.MyobCustomer:
-                    #region remove current data first:
-                    //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
-                    //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
-                    MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
-                    MyobEmployeeEditModel.RemoveAll(comInfo.AccountProfileId);
+                    #region remove current data first:               
+                    if(CurrentCardRecordIds!=null && CurrentCardRecordIds.Count > 0)
+                        MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, CurrentCardRecordIds);
+                    //MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
+                    MyobEmployeeEditModel.RemoveAll(comInfo.AccountProfileId);                    
                     #endregion
 
                     #region add data:
-                    bool cbok = await MyobCustomerEditModel.AddList(MyobCustomers, comInfo.AccountProfileId);
-                    bool ebok = await MyobEmployeeEditModel.AddList(EmployeeList, comInfo.AccountProfileId);
+                    cbok = await MyobCustomerEditModel.AddList(MyobCustomers, comInfo.AccountProfileId);
+                    ebok = await MyobEmployeeEditModel.AddList(EmployeeList, comInfo.AccountProfileId);
                     if (cbok && ebok)
                     {
                         progressBar1.Visible = false;
@@ -692,6 +715,7 @@ namespace WooCommerceAddOn
                                         catch (Exception ex)
                                         {
                                             transaction.Rollback();
+                                            MessageBox.Show(ex.ToString(), "Data Cannot be Saved", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                             throw new Exception(ex.Message);
                                         }
                                     }
