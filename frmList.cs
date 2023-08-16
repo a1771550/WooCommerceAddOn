@@ -660,9 +660,10 @@ namespace WooCommerceAddOn
 
                             foreach (Order order in Orders)
                             {
-                                if (currentSalesIds.Count > 0 && !currentSalesIds.Any(x => x == (int)order.id))
+                                if (currentSalesIds.Count > 0)
                                 {
-                                    neworders.Add(order);
+                                    if(!currentSalesIds.Any(x => x == (int)order.id))
+                                        neworders.Add(order);
                                 }
                                 else
                                 {
