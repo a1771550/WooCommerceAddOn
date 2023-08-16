@@ -651,7 +651,7 @@ namespace WooCommerceAddOn
 
                             progressBar1.Visible = true;
                             progressBar1.Style = ProgressBarStyle.Marquee;
-                            var currentSalesIds = SalesEditModel.GetWooSalesIdList();
+                            var currentSalesIds = SalesEditModel.GetSalesIdList();
 
                             List<SalesModel> saleslist = new List<SalesModel>();
                             List<SalesLnView> salelnslist = new List<SalesLnView>();
