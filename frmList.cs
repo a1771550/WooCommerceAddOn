@@ -28,8 +28,8 @@ namespace WooCommerceAddOn
     {
         public Dictionary<string, string> FouledOrderIdList;
         public Dictionary<int, string> FouledCustomerIdList { get; set; }
-        private int MaxItemCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["ItemCodeLength"]); } }
         public Dictionary<string, string> FouledProductNameList = new Dictionary<string, string>();
+        private int MaxItemCodeLength { get { return int.Parse(ConfigurationManager.AppSettings["ItemCodeLength"]); } }        
         private ComInfoModel comInfo { get; set; }
         //private string DeviceId { get; set; }
         private List<int> CheckOutIds { get; set; }
