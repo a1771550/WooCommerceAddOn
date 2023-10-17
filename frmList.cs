@@ -72,7 +72,8 @@ namespace WooCommerceAddOn
                 AppExeLocation = comInfo.abssExeLocation,
                 AppExeName = comInfo.abssExeName,
                 KeyLocation = comInfo.abssKeyLocation,
-                KeyName = comInfo.abssKeyName
+                KeyName = comInfo.abssKeyName,
+                PrimaryLocation = comInfo.abssPrimaryLocation
             };
 
             var url = string.Format("{0}/wp-json/wc/v3/", comInfo.wcURL);
@@ -171,22 +172,22 @@ namespace WooCommerceAddOn
                     progressBar1.Visible = false;
                     if (MyobProducts.Count == 0)
                     {
-                        ABSSProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId, false);
-                        if (ABSSProducts.Count == 0)
-                        {
+                        //ABSSProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId, false);
+                        //if (ABSSProducts.Count == 0)
+                        //{
                             MessageBox.Show("All Items in ABSS are already uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             Close();
-                        }
-                        else
-                        {
-                            type = DataType.AbssProduct;
-                            totalpages = ABSSProducts.Count / PageSize;
-                            TotalPage = (int)Math.Ceiling(totalpages);
-                            var mproducts = ABSSProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                            BindingList<ABSSItemModel> bindingList_abssP = new BindingList<ABSSItemModel>(mproducts);
-                            source = new BindingSource(bindingList_abssP, null);
-                            iTotal.Text = ABSSProducts.Count.ToString();
-                        }
+                        //}
+                        //else
+                        //{
+                        //    //type = DataType.AbssProduct;
+                        //    totalpages = ABSSProducts.Count / PageSize;
+                        //    TotalPage = (int)Math.Ceiling(totalpages);
+                        //    var mproducts = ABSSProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                        //    BindingList<ABSSItemModel> bindingList_abssP = new BindingList<ABSSItemModel>(mproducts);
+                        //    source = new BindingSource(bindingList_abssP, null);
+                        //    iTotal.Text = ABSSProducts.Count.ToString();
+                        //}
                     }
                     else
                     {
@@ -356,47 +357,7 @@ namespace WooCommerceAddOn
                 idx++;
                 dgList.Columns["CreditLimit"].DisplayIndex = idx;
             }
-            //if (type == DataType.AbssCustomer && dgList.Rows.Count > 0)
-            //{
-            //    int idx = 0;
-            //    dgList.Columns["cusName"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusFirstName"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusSurname"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusContact"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusPhone"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusEmail"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrStreetLine1"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrStreetLine2"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrStreetLine3"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrStreetLine4"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrStreetLine5"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrRegion"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrCity"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrState"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrPostcode"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrCountry"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrPhone1"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrPhone2"].DisplayIndex = idx;
-            //    idx++;
-            //    dgList.Columns["cusAddrPhone3"].DisplayIndex = idx;
-            //}
+            
             if (type == DataType.Order && dgList.Rows.Count > 0)
             {
                 int idx = 0;
@@ -452,25 +413,7 @@ namespace WooCommerceAddOn
             bool cbok;
             bool ebok;
             switch (type)
-            {
-                //case DataType.AbssCustomer:
-                //    #region remove current data first:
-                //    //var cusIds = AbssCustomers.Select(x => x.CustomerID).Distinct().ToHashSet();
-                //    //MyobCustomerEditModel.RemoveByCusIds(comInfo.AccountProfileId, cusIds);
-                //    //MyobCustomerEditModel.RemoveAll(comInfo.AccountProfileId);
-                //    MyobEmployeeEditModel.RemoveAll(comInfo.AccountProfileId);
-                //    #endregion
-
-                //    #region add data:
-                //    cbok = await MyobCustomerEditModel.AddList(ABSSCustomers, comInfo.AccountProfileId);
-                //    ebok = await MyobEmployeeEditModel.AddList(EmployeeList, comInfo.AccountProfileId);
-                //    if (cbok && ebok)
-                //    {
-                //        progressBar1.Visible = false;
-                //        MessageBox.Show(string.Format("{0} Saved.", DataType.Customer.ToString()), "Data Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                //    }
-                //    #endregion
-                //    break;
+            {               
                 case DataType.MyobCustomer:
                     #region remove current data first:               
                     if(CurrentCardRecordIds!=null && CurrentCardRecordIds.Count > 0)
