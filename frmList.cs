@@ -950,15 +950,16 @@ namespace WooCommerceAddOn
 
         private BindingSource GetCurrentRecordsABSS()
         {
-            switch (type)
+			int pageoff = (CurrentPageIndex - 1) * PageSize;
+			switch (type)
             {
                 case DataType.AbssCustomer:
-                    var customers = MyobCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var customers = MyobCustomers.Skip(pageoff).Take(PageSize).ToList();
                     var bindingList_C = new BindingList<MyobCustomerModel>(customers);
                     return new BindingSource(bindingList_C, null);
 
                 case DataType.AbssProduct:
-                    var products = MyobProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var products = MyobProducts.Skip(pageoff).Take(PageSize).ToList();
                     var bindingList_P = new BindingList<MyobItemModel>(products);
                     return new BindingSource(bindingList_P, null);
                 default:
@@ -969,19 +970,20 @@ namespace WooCommerceAddOn
         }
         private BindingSource GetCurrentRecords()
         {
-            switch (type)
+			int pageoff = (CurrentPageIndex - 1) * PageSize;
+			switch (type)
             {
                 case DataType.Product:
-                    var products = Products.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var products = Products.Skip(pageoff).Take(PageSize).ToList();
                     var bindingList_P = new BindingList<Product>(products);
                     return new BindingSource(bindingList_P, null);
                 case DataType.Customer:
-                    var customers = Customers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var customers = Customers.Skip(pageoff).Take(PageSize).ToList();
                     var bindingList_C = new BindingList<Customer>(customers);
                     return new BindingSource(bindingList_C, null);
                 default:
                 case DataType.Order:
-                    var orders = Orders.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
+                    var orders = Orders.Skip(pageoff).Take(PageSize).ToList();
                     var bindingList_O = new BindingList<Order>(orders);
                     return new BindingSource(bindingList_O, null);
             }
@@ -1020,32 +1022,7 @@ namespace WooCommerceAddOn
 
             }
         }
-
-        class PageOffsetList : System.ComponentModel.IListSource
-        {
-            public bool ContainsListCollection { get; protected set; }
-            private int ExpectedTotal { get; set; }
-            private int PageSize { get; set; }
-            public PageOffsetList(int expectedTotal, int pageSize)
-            {
-                ExpectedTotal = expectedTotal;
-                PageSize = pageSize;
-            }
-
-            public System.Collections.IList GetList()
-            {
-                // Return a list of page offsets based on "totalRecords" and "pageSize"
-                var pageOffsets = new List<int>();
-                for (int offset = 0; offset < ExpectedTotal; offset += PageSize)
-                    pageOffsets.Add(offset);
-                return pageOffsets;
-            }
-        }
-
-        private void numExpectedTotal_ValueChanged(object sender, EventArgs e)
-        {
-            //ExpectedTotal = (int)numActualTotal.Value;
-        }
+       
 
         private void btnExit_Click(object sender, EventArgs e)
         {
