@@ -139,22 +139,8 @@ namespace WooCommerceAddOn
                     progressBar1.Visible = false;
                     if (MyobCustomers.Count == 0)
                     {
-                        //ABSSCustomers = MyobCustomerEditModel.GetCustomerList(comInfo.AccountProfileId, false);
-                        //if (ABSSCustomers.Count == 0)
-                        //{
-                        MessageBox.Show("All Customers in ABSS are already uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        Close();
-                        //}
-                        //else
-                        //{
-                        //type = DataType.AbssCustomer;
-                        //totalpages = ABSSCustomers.Count / PageSize;
-                        //TotalPage = (int)Math.Ceiling(totalpages);
-                        //var mcustomers = ABSSCustomers.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                        //BindingList<ABSSCustomerModel> bindingList_abssC = new BindingList<ABSSCustomerModel>(mcustomers);
-                        //source = new BindingSource(bindingList_abssC, null);
-                        //iTotal.Text = ABSSCustomers.Count.ToString();
-                        //}
+                        MessageBox.Show("All Customers in ABSS are uploaded to WooCommerce already. No new customers data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Close();                       
                     }
                     else
                     {
@@ -172,22 +158,8 @@ namespace WooCommerceAddOn
                     progressBar1.Visible = false;
                     if (MyobProducts.Count == 0)
                     {
-                        //ABSSProducts = MyobItemEditModel.GetItemList(comInfo.AccountProfileId, false);
-                        //if (ABSSProducts.Count == 0)
-                        //{
-                            MessageBox.Show("All Items in ABSS are already uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            Close();
-                        //}
-                        //else
-                        //{
-                        //    //type = DataType.AbssProduct;
-                        //    totalpages = ABSSProducts.Count / PageSize;
-                        //    TotalPage = (int)Math.Ceiling(totalpages);
-                        //    var mproducts = ABSSProducts.Skip(CurrentPageIndex - 1).Take(PageSize).ToList();
-                        //    BindingList<ABSSItemModel> bindingList_abssP = new BindingList<ABSSItemModel>(mproducts);
-                        //    source = new BindingSource(bindingList_abssP, null);
-                        //    iTotal.Text = ABSSProducts.Count.ToString();
-                        //}
+                            MessageBox.Show("All Items in ABSS are uploaded to WooCommerce already. No new items data are found.", "No New Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            Close();                        
                     }
                     else
                     {
