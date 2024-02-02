@@ -704,72 +704,78 @@ namespace WooCommerceAddOn
 						}
 					}
 					break;
-				default:
-				case DataType.Order:
-					bool islocked = false;
-					FileInfo fileInfo = new FileInfo(Path.Combine(comInfo.abssFileLocation, comInfo.abssFileName));
-					if (fileInfo.Exists)
-					{
-						islocked = FileHelper.IsFileLocked(fileInfo);
-					}
-					if (islocked)
-					{
-						MessageBox.Show("The ABSS file is being locked. Please make sure the file is unlocked before trying to do data transference.", "ABSS", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					}
-					else
-					{
-						if (SalesEditModel.GetWooSalesCount() == 0)
-						{
-							progressBar1.Visible = false;
-							MessageBox.Show("No Sales Data Found! Please save WooCommerce order data to DB first.", "Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-						}
-						else
-						{
-							progressBar1.Visible = false;
-							frmSalesDate frmSalesDate = new frmSalesDate(comInfo.abssDateFormat);
-							frmSalesDate.ShowDialog();
-							if (frmSalesDate.dialogResult == DialogResult.OK)
-							{
-								progressBar1.Visible = true;
-								progressBar1.Style = ProgressBarStyle.Marquee;
-								using (var context = new WADbContext())
-								{
-									using (var transaction = context.Database.BeginTransaction())
-									{
-										try
-										{
-											result = await ModelHelper.WriteSalesToABSS(context, comInfo, frmSalesDate.IncludeUploaded, frmSalesDate.frmDate, frmSalesDate.toDate);
-											progressBar1.Visible = false;
-
-											if (result != null)
-											{
-												const string caption = "ABSS Upload";
-												if (result.Success)
-												{
-													MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
-												}
-												else
-												{
-													MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
-												}
-											}
-											transaction.Commit();
-										}
-										catch (Exception ex)
-										{
-											transaction.Rollback();
-											throw new Exception(ex.Message);
-										}
-									}
-								}
-							}
-						}
-					}
-
-					break;
-			}
+                default:
+                case DataType.Order:
+                    await UploadOrderToABSS();
+                    break;
+            }
 		}
-		private async void btnWooCommerce_Click(object sender, EventArgs e)
+
+        private async Task UploadOrderToABSS()
+        {
+			AbssResult result;
+            bool islocked = false;
+            FileInfo fileInfo = new FileInfo(Path.Combine(comInfo.abssFileLocation, comInfo.abssFileName));
+            if (fileInfo.Exists)
+            {
+                islocked = FileHelper.IsFileLocked(fileInfo);
+            }
+            if (islocked)
+            {
+                MessageBox.Show("The ABSS file is being locked. Please make sure the file is unlocked before trying to do data transference.", "ABSS", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                if (SalesEditModel.GetWooSalesCount() == 0)
+                {
+                    progressBar1.Visible = false;
+                    MessageBox.Show("No Sales Data Found! Please save WooCommerce order data to DB first.", "Data", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
+                else
+                {
+                    progressBar1.Visible = false;
+                    frmSalesDate frmSalesDate = new frmSalesDate(comInfo.abssDateFormat);
+                    frmSalesDate.ShowDialog();
+                    if (frmSalesDate.dialogResult == DialogResult.OK)
+                    {
+                        progressBar1.Visible = true;
+                        progressBar1.Style = ProgressBarStyle.Marquee;
+                        using (var context = new WADbContext())
+                        {
+                            using (var transaction = context.Database.BeginTransaction())
+                            {
+                                try
+                                {
+                                    result = await ModelHelper.WriteSalesToABSS(context, comInfo, frmSalesDate.IncludeUploaded, frmSalesDate.frmDate, frmSalesDate.toDate);
+                                    progressBar1.Visible = false;
+
+                                    if (result != null)
+                                    {
+                                        const string caption = "ABSS Upload";
+                                        if (result.Success)
+                                        {
+                                            MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                        }
+                                        else
+                                        {
+                                            MessageBox.Show(result.Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        }
+                                    }
+                                    transaction.Commit();
+                                }
+                                catch (Exception ex)
+                                {
+                                    transaction.Rollback();
+                                    throw new Exception(ex.Message);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private async void btnWooCommerce_Click(object sender, EventArgs e)
 		{
 			waitForm.Show(this);
 			progressBar1.Visible = true;
